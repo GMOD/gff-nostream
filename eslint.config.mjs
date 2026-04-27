@@ -1,6 +1,6 @@
 import eslint from '@eslint/js'
 import { defineConfig } from 'eslint/config'
-import importPlugin from 'eslint-plugin-import'
+import importPlugin from 'eslint-plugin-import-x'
 import tseslint from 'typescript-eslint'
 
 export default defineConfig(
@@ -57,9 +57,9 @@ export default defineConfig(
         'error',
         { 'ts-expect-error': 'allow-with-description', 'ts-ignore': true },
       ],
-      'import/no-unresolved': 'off',
-      'import/extensions': ['error', 'ignorePackages'],
-      'import/order': [
+      'import-x/no-unresolved': 'off',
+      'import-x/extensions': ['error', 'ignorePackages'],
+      'import-x/order': [
         'error',
         {
           named: true,
