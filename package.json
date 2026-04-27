@@ -5,7 +5,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cmdcolin/gff-nostream.git"
+    "url": "https://github.com/GMOD/gff-nostream.git"
   },
   "type": "module",
   "types": "./dist/index.d.ts",
