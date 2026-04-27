@@ -8,7 +8,7 @@
     "url": "https://github.com/GMOD/gff-nostream.git"
   },
   "type": "module",
-  "types": "./dist/index.d.ts",
+  "main": "dist/index.js",
   "exports": {
     "import": "./esm/index.js",
     "require": "./dist/index.js"
@@ -25,18 +25,19 @@
   ],
   "scripts": {
     "test": "vitest",
+    "clean": "rimraf dist esm",
+    "format": "prettier --write .",
+    "lint": "eslint --report-unused-disable-directives --max-warnings 0",
+    "prebuild": "pnpm clean",
+    "build:esm": "tsc --outDir esm",
+    "build:es5": "tsc --module commonjs --moduleResolution bundler --outDir dist",
+    "postbuild:es5": "echo '{\"type\": \"commonjs\"}' > dist/package.json",
+    "preversion": "pnpm lint && pnpm test --run && pnpm build",
+    "postversion": "git push --follow-tags",
+    "build": "pnpm build:esm && pnpm build:es5",
     "benchonly": "vitest bench",
     "bench": "./scripts/build-both-branches.sh \"$BRANCH1\" \"$BRANCH2\" && vitest bench",
-    "clean": "rm -rf dist esm",
-    "lint": "eslint --report-unused-disable-directives --max-warnings 0",
-    "format": "prettier --write .",
-    "prebuild": "yarn clean",
-    "build:esm": "tsc --target esnext --outDir esm",
-    "build:es5": "tsc --target es2020 --module commonjs --moduleResolution bundler --outDir dist",
-    "postbuild:es5": "echo '{\"type\": \"commonjs\"}' > dist/package.json",
-    "build": "yarn build:es5 && yarn build:esm",
-    "prepublishOnly": "yarn test --run && yarn build",
-    "postversion": "git push --follow-tags"
+    "prepublishOnly": "pnpm test --run && pnpm build"
   },
   "keywords": [
     "bionode",
