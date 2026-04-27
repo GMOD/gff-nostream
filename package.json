@@ -10,12 +10,8 @@
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {
-    "import": {
-      "import": "./esm/index.js"
-    },
-    "require": {
-      "require": "./dist/index.js"
-    }
+    "import": "./esm/index.js",
+    "require": "./dist/index.js"
   },
   "author": {
     "name": "Colin Diesh",
@@ -31,9 +27,8 @@
     "test": "vitest",
     "benchonly": "vitest bench",
     "bench": "./scripts/build-both-branches.sh \"$BRANCH1\" \"$BRANCH2\" && vitest bench",
-    "clean": "rimraf dist esm",
+    "clean": "rm -rf dist esm",
     "lint": "eslint --report-unused-disable-directives --max-warnings 0",
-    "docs": "documentation readme src/api.ts --section=API  --shallow && yarn format",
     "format": "prettier --write .",
     "prebuild": "yarn clean",
     "build:esm": "tsc --target esnext --outDir esm",
@@ -52,14 +47,9 @@
   ],
   "devDependencies": {
     "@types/node": "^25.6.0",
-    "@typescript-eslint/eslint-plugin": "^8.59.0",
-    "@typescript-eslint/parser": "^8.59.0",
-    "@vitest/coverage-v8": "^4.1.5",
-    "documentation": "^14.0.3",
     "eslint": "^10.2.1",
     "eslint-plugin-import": "^2.32.0",
     "prettier": "^3.8.3",
-    "rimraf": "^6.1.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.0",
     "vitest": "^4.1.5"
