@@ -135,17 +135,17 @@ function parseFeatureImpl(
   shouldUnescape: boolean,
 ): GFF3FeatureLine {
   const f = line.split('\t')
-  const startStr = f[3]
-  const endStr = f[4]
-  const scoreStr = f[5]
-  const strand = f[6]
-  const phase = f[7]
-  const attrString = f[8]
+  const startStr = f[3]!
+  const endStr = f[4]!
+  const scoreStr = f[5]!
+  const strand = f[6]!
+  const phase = f[7]!
+  const attrString = f[8]!
 
   return {
-    seq_id: normImpl(f[0], shouldUnescape),
-    source: normImpl(f[1], shouldUnescape),
-    type: normImpl(f[2], shouldUnescape),
+    seq_id: normImpl(f[0]!, shouldUnescape),
+    source: normImpl(f[1]!, shouldUnescape),
+    type: normImpl(f[2]!, shouldUnescape),
     start: startStr.length === 0 || startStr === '.' ? null : +startStr,
     end: endStr.length === 0 || endStr === '.' ? null : +endStr,
     score: scoreStr.length === 0 || scoreStr === '.' ? null : +scoreStr,
@@ -255,26 +255,26 @@ export function parseDirective(
   const [, name] = match
   let [, , contents] = match
 
-  const parsed: GFF3Directive = { directive: name }
-  if (contents.length) {
-    contents = contents.replace(lineEndRegex, '')
+  const parsed: GFF3Directive = { directive: name! }
+  if (contents!.length) {
+    contents = contents!.replace(lineEndRegex, '')
     parsed.value = contents
   }
 
   if (name === 'sequence-region') {
-    const c = contents.split(whitespaceRegex, 3)
+    const c = contents!.split(whitespaceRegex, 3)
     return {
       ...parsed,
-      seq_id: c[0],
-      start: c[1]?.replaceAll(nonDigitRegex, ''),
-      end: c[2]?.replaceAll(nonDigitRegex, ''),
+      seq_id: c[0]!,
+      start: c[1]!.replaceAll(nonDigitRegex, ''),
+      end: c[2]!.replaceAll(nonDigitRegex, ''),
     }
   } else if (name === 'genome-build') {
-    const [source, buildName] = contents.split(whitespaceRegex, 2)
+    const [source, buildName] = contents!.split(whitespaceRegex, 2)
     return {
       ...parsed,
-      source,
-      buildName,
+      source: source!,
+      buildName: buildName!,
     }
   }
 
@@ -499,15 +499,15 @@ function parseFeatureJBrowseImpl(
   shouldUnescape: boolean,
 ): JBrowseFeature {
   const f = line.split('\t')
-  const seq_id = f[0]
-  const source = f[1]
-  const type = f[2]
-  const startStr = f[3]
-  const endStr = f[4]
-  const scoreStr = f[5]
-  const strand = f[6]
-  const phase = f[7]
-  const attrString = f[8]
+  const seq_id = f[0]!
+  const source = f[1]!
+  const type = f[2]!
+  const startStr = f[3]!
+  const endStr = f[4]!
+  const scoreStr = f[5]!
+  const strand = f[6]!
+  const phase = f[7]!
+  const attrString = f[8]!
 
   const result: JBrowseFeature = {
     refName:

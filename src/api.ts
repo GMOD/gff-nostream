@@ -100,7 +100,7 @@ export function parseRecords(records: LineRecord[]): GFF3Feature[] {
 
     let feature: GFF3Feature
     if (ids) {
-      const id = ids[0]
+      const id = ids[0]!
       const existing = byId.get(id)
       if (existing) {
         existing.push(featureLine)
