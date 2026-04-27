@@ -268,14 +268,14 @@ export function parseDirective(
       seq_id: c[0],
       start: c[1]?.replaceAll(nonDigitRegex, ''),
       end: c[2]?.replaceAll(nonDigitRegex, ''),
-    } as GFF3SequenceRegionDirective
+    }
   } else if (name === 'genome-build') {
     const [source, buildName] = contents.split(whitespaceRegex, 2)
     return {
       ...parsed,
       source,
       buildName,
-    } as GFF3GenomeBuildDirective
+    }
   }
 
   return parsed
