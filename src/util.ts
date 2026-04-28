@@ -2,7 +2,6 @@
 // JavaScript port of Robert Buels's Bio::GFF3::LowLevel Perl module.
 
 const directiveRegex = /^\s*##\s*(\S+)\s*(.*)/
-const lineEndRegex = /\r?\n$/
 const whitespaceRegex = /\s+/
 const nonDigitRegex = /\D/g
 
@@ -252,17 +251,16 @@ export function parseDirective(
     return null
   }
 
-  const [, name] = match
-  let [, , contents] = match
+  const name = match[1]!
+  let contents = match[2]!
 
-  const parsed: GFF3Directive = { directive: name! }
-  if (contents!.length) {
-    contents = contents!.replace(lineEndRegex, '')
-    parsed.value = contents
+  const parsed: GFF3Directive = { directive: name }
+  if (contents.length) {
+    parsed.value = contents.trimEnd()
   }
 
   if (name === 'sequence-region') {
-    const c = contents!.split(whitespaceRegex, 3)
+    const c = contents.split(whitespaceRegex, 3)
     return {
       ...parsed,
       seq_id: c[0]!,
@@ -270,7 +268,7 @@ export function parseDirective(
       end: c[2]!.replaceAll(nonDigitRegex, ''),
     }
   } else if (name === 'genome-build') {
-    const [source, buildName] = contents!.split(whitespaceRegex, 2)
+    const [source, buildName] = contents.split(whitespaceRegex, 2)
     return {
       ...parsed,
       source: source!,
@@ -446,11 +444,6 @@ function parseAttributesJBrowseImpl(
       const eqIdx = attrString.indexOf('=', start)
       if (eqIdx !== -1 && eqIdx < semiIdx && eqIdx + 1 < semiIdx) {
         const tag = attrString.slice(start, eqIdx)
-        if (tag === '_lineHash') {
-          start = semiIdx + 1
-          continue
-        }
-
         let key = COMMON_ATTRS[tag]
         if (key === undefined) {
           key = tag.toLowerCase()

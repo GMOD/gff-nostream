@@ -44,14 +44,11 @@ function stringToRecords(str: string) {
   const lines = str.split(/\r?\n/)
   const records: LineRecord[] = []
   for (const line of lines) {
-    if (line.length === 0 || line.startsWith('#')) {
-      if (line.startsWith('##FASTA')) {
-        break
-      }
-      continue
-    }
-    if (line.startsWith('>')) {
+    if (line.startsWith('##FASTA') || line.startsWith('>')) {
       break
+    }
+    if (line.length === 0 || line.startsWith('#')) {
+      continue
     }
     records.push({
       line,
@@ -174,20 +171,21 @@ export function parseRecordsJBrowse(records: LineRecord[]): JBrowseFeature[] {
       continue
     }
 
+    if (id && byId.has(id)) {
+      continue
+    }
+
     if (id) {
-      const existing = byId.get(id)
-      if (!existing) {
-        if (!parent) {
-          items.push(feature)
+      if (!parent) {
+        items.push(feature)
+      }
+      byId.set(id, feature)
+      const waiting = orphans.get(id)
+      if (waiting) {
+        for (const w of waiting) {
+          feature.subfeatures.push(w)
         }
-        byId.set(id, feature)
-        const waiting = orphans.get(id)
-        if (waiting) {
-          for (const w of waiting) {
-            feature.subfeatures.push(w)
-          }
-          orphans.delete(id)
-        }
+        orphans.delete(id)
       }
     }
 
