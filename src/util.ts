@@ -252,7 +252,7 @@ export function parseDirective(
   }
 
   const name = match[1]!
-  let contents = match[2]!
+  const contents = match[2]!
 
   const parsed: GFF3Directive = { directive: name }
   if (contents.length) {

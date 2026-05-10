@@ -3,7 +3,8 @@
 [![NPM version](https://img.shields.io/npm/v/gff-nostream.svg?style=flat-square)](https://npmjs.org/package/gff-nostream)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/GMOD/gff-nostream/push.yml?branch=main)](https://github.com/GMOD/gff-nostream/actions?query=branch%3Amain+workflow%3APush+)
 
-Parse GFF3 data. A simplified version of [@gmod/gff](https://github.com/GMOD/gff-js) with no Node.js stream dependency.
+Parse GFF3 data. A simplified version of
+[@gmod/gff](https://github.com/GMOD/gff-js) with no Node.js stream dependency.
 
 ## Install
 
@@ -21,7 +22,9 @@ const features = parseStringSync(stringOfGFF3)
 
 ## Object format
 
-In GFF3, features can have more than one location. Features are returned as arrays of all lines sharing the same ID. Values that are `.` in GFF3 are `null` in the output.
+In GFF3, features can have more than one location. Features are returned as
+arrays of all lines sharing the same ID. Values that are `.` in GFF3 are `null`
+in the output.
 
 A simple feature located in one place:
 
@@ -93,11 +96,13 @@ Synchronously parse a GFF3 string and return an array of features.
 
 ### `parseStringSyncJBrowse(str: string): JBrowseFeature[]`
 
-Synchronously parse a GFF3 string and return features in JBrowse format (flat objects with `subfeatures` instead of `child_features`).
+Synchronously parse a GFF3 string and return features in JBrowse format (flat
+objects with `subfeatures` instead of `child_features`).
 
 ### `parseRecords(records: LineRecord[]): GFF3Feature[]`
 
-Parse an array of `LineRecord` objects. Useful when managing raw line data directly (e.g. from an indexed file with byte offsets).
+Parse an array of `LineRecord` objects. Useful when managing raw line data
+directly (e.g. from an indexed file with byte offsets).
 
 ### `parseRecordsJBrowse(records: LineRecord[]): JBrowseFeature[]`
 
@@ -105,7 +110,8 @@ Same as `parseRecords` but returns JBrowse-format features.
 
 ## Publishing
 
-[Trusted publishing](https://docs.npmjs.com/about-trusted-publishing) via GitHub Actions.
+[Trusted publishing](https://docs.npmjs.com/about-trusted-publishing) via GitHub
+Actions.
 
 ```bash
 npm version patch  # or minor/major
