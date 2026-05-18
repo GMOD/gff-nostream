@@ -56156,6 +56156,162 @@ exports[`GFF3 parser > can parse an excerpt of the refGene gff3 1`] = `
           {
             "attributes": {
               "ID": [
+                "NM_199294",
+              ],
+              "Parent": [
+                "APITD1",
+              ],
+            },
+            "child_features": [
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_199294",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10490573,
+                  "phase": null,
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10490158,
+                  "strand": "+",
+                  "type": "five_prime_UTR",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_199294",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10490625,
+                  "phase": "0",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10490574,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_199294",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10494022,
+                  "phase": "0",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10493898,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_199294",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10494747,
+                  "phase": "1",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10494713,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_199294",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10500470,
+                  "phase": "2",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10500403,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_199294",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10502462,
+                  "phase": "0",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10502321,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_199294",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10502872,
+                  "phase": null,
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10502463,
+                  "strand": "+",
+                  "type": "three_prime_UTR",
+                },
+              ],
+            ],
+            "derived_features": [],
+            "end": 10502872,
+            "phase": null,
+            "score": null,
+            "seq_id": "chr1",
+            "source": "ngsutils",
+            "start": 10490158,
+            "strand": "+",
+            "type": "mRNA",
+          },
+        ],
+        [
+          {
+            "attributes": {
+              "ID": [
                 "NR_036462",
               ],
               "Parent": [
@@ -56818,6 +56974,299 @@ exports[`GFF3 parser > can parse an excerpt of the refGene gff3 1`] = `
         ],
       },
       "child_features": [
+        [
+          {
+            "attributes": {
+              "ID": [
+                "NM_198544",
+              ],
+              "Parent": [
+                "APITD1-CORT",
+              ],
+            },
+            "child_features": [
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_198544",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10490573,
+                  "phase": null,
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10490158,
+                  "strand": "+",
+                  "type": "five_prime_UTR",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_198544",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10490625,
+                  "phase": "0",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10490574,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_198544",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10494022,
+                  "phase": "0",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10493898,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_198544",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10494747,
+                  "phase": "1",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10494713,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_198544",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10500470,
+                  "phase": "2",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10500403,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_198544",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10511652,
+                  "phase": "0",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10511433,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_198544",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10512060,
+                  "phase": null,
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10511653,
+                  "strand": "+",
+                  "type": "three_prime_UTR",
+                },
+              ],
+            ],
+            "derived_features": [],
+            "end": 10512060,
+            "phase": null,
+            "score": null,
+            "seq_id": "chr1",
+            "source": "ngsutils",
+            "start": 10490158,
+            "strand": "+",
+            "type": "mRNA",
+          },
+        ],
+        [
+          {
+            "attributes": {
+              "ID": [
+                "NM_199006",
+              ],
+              "Parent": [
+                "APITD1-CORT",
+              ],
+            },
+            "child_features": [
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_199006",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10490573,
+                  "phase": null,
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10490158,
+                  "strand": "+",
+                  "type": "five_prime_UTR",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_199006",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10490625,
+                  "phase": "0",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10490574,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_199006",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10494022,
+                  "phase": "0",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10493898,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_199006",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10494747,
+                  "phase": "1",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10494713,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_199006",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10511458,
+                  "phase": "2",
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10511433,
+                  "strand": "+",
+                  "type": "CDS",
+                },
+              ],
+              [
+                {
+                  "attributes": {
+                    "Parent": [
+                      "NM_199006",
+                    ],
+                  },
+                  "child_features": [],
+                  "derived_features": [],
+                  "end": 10512060,
+                  "phase": null,
+                  "score": null,
+                  "seq_id": "chr1",
+                  "source": "ngsutils",
+                  "start": 10511459,
+                  "strand": "+",
+                  "type": "three_prime_UTR",
+                },
+              ],
+            ],
+            "derived_features": [],
+            "end": 10512060,
+            "phase": null,
+            "score": null,
+            "seq_id": "chr1",
+            "source": "ngsutils",
+            "start": 10490158,
+            "strand": "+",
+            "type": "mRNA",
+          },
+        ],
         [
           {
             "attributes": {

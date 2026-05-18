@@ -157,6 +157,30 @@ SL2.40%25ch01	IT%25AG eugene	g%25e;ne	80999140	81004317	.	+	.	multivalue=val1,va
     expect(result).toEqual(referenceResult)
   })
 
+  it('shares child_features across all lines of a multi-location feature', () => {
+    const records = [
+      'ctg\t.\tgene\t1\t10\t.\t+\t.\tID=g',
+      'ctg\t.\tmRNA\t1\t5\t.\t+\t.\tID=m1;Parent=g',
+      'ctg\t.\tgene\t20\t30\t.\t+\t.\tID=g',
+      'ctg\t.\tmRNA\t20\t25\t.\t+\t.\tID=m2;Parent=g',
+    ].map(line => ({
+      line,
+      start: 0,
+      end: 0,
+      hasEscapes: false,
+    }))
+
+    const result = parseRecords(records)
+    expect(result.length).toBe(1)
+    const gene = result[0]!
+    expect(gene.length).toBe(2)
+    // both lines of the multi-location gene see all children, regardless of
+    // whether the child arrived before or after the duplicate-ID line
+    expect(gene[0]!.child_features).toHaveLength(2)
+    expect(gene[1]!.child_features).toHaveLength(2)
+    expect(gene[0]!.child_features).toBe(gene[1]!.child_features)
+  })
+
   it('can parse another string synchronously', () => {
     const gff3 = `
 SL2.40%25ch01	IT%25AG eugene	g%25e;ne	80999140	81004317	.	+	.	Alias=Solyc01g098840;ID=gene:Solyc01g098840.2;Name=Solyc01g098840.2;from_BOGAS=1;length=5178
@@ -256,6 +280,18 @@ ctg123\t.\texon\t1050\t1500\t.\t+\t.\tID=exon1;Parent=mRNA00001`
     expect(result.length).toBe(1)
     expect(result[0]._lineHash).toBe('offset123')
     expect(result[0].subfeatures[0]._lineHash).toBe('456')
+  })
+
+  it('takes the first value when ID is multi-valued', () => {
+    const gff3 = `ctg\t.\tgene\t1\t10\t.\t+\t.\tID=a,b
+ctg\t.\tmRNA\t1\t5\t.\t+\t.\tID=m;Parent=a`
+
+    const result = parseStringSyncJBrowse(gff3)
+    expect(result.length).toBe(1)
+    expect(result[0]!.id).toEqual(['a', 'b'])
+    // Parent=a should match the first ID value
+    expect(result[0]!.subfeatures.length).toBe(1)
+    expect(result[0]!.subfeatures[0]!.id).toBe('m')
   })
 
   it('handles escaped characters', () => {

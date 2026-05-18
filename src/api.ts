@@ -14,8 +14,10 @@ import type {
 export interface LineRecord {
   line: string
   lineHash?: string | number
-  start: number
-  end: number
+  /** Optional passthrough byte offsets — not used by the parser */
+  start?: number
+  /** Optional passthrough byte offsets — not used by the parser */
+  end?: number
   hasEscapes: boolean
 }
 
@@ -52,8 +54,6 @@ function stringToRecords(str: string) {
     }
     records.push({
       line,
-      start: 0,
-      end: 0,
       hasEscapes: line.includes('%'),
     })
   }
@@ -92,48 +92,52 @@ export function parseRecords(records: LineRecord[]): GFF3Feature[] {
 
     if (!ids && !parents) {
       items.push([featureLine])
-      continue
-    }
-
-    let feature: GFF3Feature
-    if (ids) {
-      const id = ids[0]!
-      const existing = byId.get(id)
-      if (existing) {
-        existing.push(featureLine)
-        feature = existing
+    } else {
+      let feature: GFF3Feature
+      if (ids) {
+        const id = ids[0]!
+        const existing = byId.get(id)
+        if (existing) {
+          // Multi-location continuation: share child_features/derived_features
+          // with the first line so children remain visible across all lines
+          // regardless of arrival order.
+          featureLine.child_features = existing[0]!.child_features
+          featureLine.derived_features = existing[0]!.derived_features
+          existing.push(featureLine)
+          feature = existing
+        } else {
+          feature = [featureLine]
+          if (!parents) {
+            items.push(feature)
+          }
+          byId.set(id, feature)
+          const waiting = orphans.get(id)
+          if (waiting) {
+            for (const w of waiting) {
+              featureLine.child_features.push(w)
+            }
+            orphans.delete(id)
+          }
+        }
       } else {
         feature = [featureLine]
-        if (!parents) {
-          items.push(feature)
-        }
-        byId.set(id, feature)
-        const waiting = orphans.get(id)
-        if (waiting) {
-          for (const w of waiting) {
-            featureLine.child_features.push(w)
-          }
-          orphans.delete(id)
-        }
       }
-    } else {
-      feature = [featureLine]
-    }
 
-    if (parents) {
-      for (const parentId of parents) {
-        const parent = byId.get(parentId)
-        if (parent) {
-          for (const p of parent) {
-            p.child_features.push(feature)
+      if (parents) {
+        for (const parentId of parents) {
+          const parent = byId.get(parentId)
+          if (parent) {
+            // child_features is shared across all parent feature lines,
+            // so push once via the first line.
+            parent[0]!.child_features.push(feature)
+          } else {
+            let arr = orphans.get(parentId)
+            if (!arr) {
+              arr = []
+              orphans.set(parentId, arr)
+            }
+            arr.push(feature)
           }
-        } else {
-          let arr = orphans.get(parentId)
-          if (!arr) {
-            arr = []
-            orphans.set(parentId, arr)
-          }
-          arr.push(feature)
         }
       }
     }
@@ -163,45 +167,43 @@ export function parseRecordsJBrowse(records: LineRecord[]): JBrowseFeature[] {
       feature._lineHash = String(record.lineHash)
     }
 
-    const id = feature.id as string | undefined
+    // attribute parsing collapses single-element arrays to scalars, so id can
+    // be string | string[]; defensively take the first if multi-valued.
+    const rawId = feature.id as string | string[] | undefined
+    const id = Array.isArray(rawId) ? rawId[0] : rawId
     const parent = feature.parent as string | string[] | undefined
 
     if (!id && !parent) {
       items.push(feature)
-      continue
-    }
-
-    if (id && byId.has(id)) {
-      continue
-    }
-
-    if (id) {
-      if (!parent) {
-        items.push(feature)
-      }
-      byId.set(id, feature)
-      const waiting = orphans.get(id)
-      if (waiting) {
-        for (const w of waiting) {
-          feature.subfeatures.push(w)
+    } else if (!id || !byId.has(id)) {
+      if (id) {
+        if (!parent) {
+          items.push(feature)
         }
-        orphans.delete(id)
-      }
-    }
-
-    if (parent) {
-      const parents = Array.isArray(parent) ? parent : [parent]
-      for (const parentId of parents) {
-        const parentFeature = byId.get(parentId)
-        if (parentFeature) {
-          parentFeature.subfeatures.push(feature)
-        } else {
-          let arr = orphans.get(parentId)
-          if (!arr) {
-            arr = []
-            orphans.set(parentId, arr)
+        byId.set(id, feature)
+        const waiting = orphans.get(id)
+        if (waiting) {
+          for (const w of waiting) {
+            feature.subfeatures.push(w)
           }
-          arr.push(feature)
+          orphans.delete(id)
+        }
+      }
+
+      if (parent) {
+        const parents = Array.isArray(parent) ? parent : [parent]
+        for (const parentId of parents) {
+          const parentFeature = byId.get(parentId)
+          if (parentFeature) {
+            parentFeature.subfeatures.push(feature)
+          } else {
+            let arr = orphans.get(parentId)
+            if (!arr) {
+              arr = []
+              orphans.set(parentId, arr)
+            }
+            arr.push(feature)
+          }
         }
       }
     }

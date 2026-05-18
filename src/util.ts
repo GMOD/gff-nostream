@@ -122,11 +122,20 @@ export function parseAttributesNoUnescape(attrString: string): GFF3Attributes {
   return parseAttributesImpl(attrString, false)
 }
 
-function normImpl(s: string, shouldUnescape: boolean) {
-  if (s.length === 0 || s === '.') {
-    return null
-  }
-  return shouldUnescape ? unescape(s) : s
+function isEmpty(s: string) {
+  return s.length === 0 || s === '.'
+}
+
+function strField<E extends null | ''>(
+  s: string,
+  shouldUnescape: boolean,
+  empty: E,
+) {
+  return isEmpty(s) ? empty : shouldUnescape ? unescape(s) : s
+}
+
+function numField(s: string) {
+  return isEmpty(s) ? null : +s
 }
 
 function parseFeatureImpl(
@@ -134,26 +143,19 @@ function parseFeatureImpl(
   shouldUnescape: boolean,
 ): GFF3FeatureLine {
   const f = line.split('\t')
-  const startStr = f[3]!
-  const endStr = f[4]!
-  const scoreStr = f[5]!
-  const strand = f[6]!
-  const phase = f[7]!
   const attrString = f[8]!
-
   return {
-    seq_id: normImpl(f[0]!, shouldUnescape),
-    source: normImpl(f[1]!, shouldUnescape),
-    type: normImpl(f[2]!, shouldUnescape),
-    start: startStr.length === 0 || startStr === '.' ? null : +startStr,
-    end: endStr.length === 0 || endStr === '.' ? null : +endStr,
-    score: scoreStr.length === 0 || scoreStr === '.' ? null : +scoreStr,
-    strand: normImpl(strand, false),
-    phase: normImpl(phase, false),
-    attributes:
-      attrString.length === 0 || attrString === '.'
-        ? null
-        : parseAttributesImpl(attrString, shouldUnescape),
+    seq_id: strField(f[0]!, shouldUnescape, null),
+    source: strField(f[1]!, shouldUnescape, null),
+    type: strField(f[2]!, shouldUnescape, null),
+    start: numField(f[3]!),
+    end: numField(f[4]!),
+    score: numField(f[5]!),
+    strand: strField(f[6]!, false, null),
+    phase: strField(f[7]!, false, null),
+    attributes: isEmpty(attrString)
+      ? null
+      : parseAttributesImpl(attrString, shouldUnescape),
   }
 }
 
@@ -176,61 +178,6 @@ export function parseFeature(line: string): GFF3FeatureLine {
  */
 export function parseFeatureNoUnescape(line: string): GFF3FeatureLine {
   return parseFeatureImpl(line, false)
-}
-
-function parseFieldsArrayImpl(
-  f: (string | null | undefined)[],
-  shouldUnescape: boolean,
-): GFF3FeatureLine {
-  const seq_id = f[0]
-  const source = f[1]
-  const type = f[2]
-  const startStr = f[3]
-  const endStr = f[4]
-  const scoreStr = f[5]
-  const strand = f[6]
-  const phase = f[7]
-  const attrString = f[8]
-
-  return {
-    seq_id: seq_id ? normImpl(seq_id, shouldUnescape) : null,
-    source: source ? normImpl(source, shouldUnescape) : null,
-    type: type ? normImpl(type, shouldUnescape) : null,
-    start: !startStr || startStr === '.' ? null : +startStr,
-    end: !endStr || endStr === '.' ? null : +endStr,
-    score: !scoreStr || scoreStr === '.' ? null : +scoreStr,
-    strand: strand && strand !== '.' ? strand : null,
-    phase: phase && phase !== '.' ? phase : null,
-    attributes:
-      !attrString || attrString === '.'
-        ? null
-        : parseAttributesImpl(attrString, shouldUnescape),
-  }
-}
-
-/**
- * Parse a GFF3 feature from a pre-split fields array
- *
- * @param f - Array of 9 GFF3 column values (use null or '.' for empty values)
- * @returns The parsed feature
- */
-export function parseFieldsArray(
-  f: (string | null | undefined)[],
-): GFF3FeatureLine {
-  return parseFieldsArrayImpl(f, true)
-}
-
-/**
- * Parse a GFF3 feature from a pre-split fields array without unescaping.
- * Fast path for data known to contain no escaped characters.
- *
- * @param f - Array of 9 GFF3 column values (use null or '.' for empty values)
- * @returns The parsed feature
- */
-export function parseFieldsArrayNoUnescape(
-  f: (string | null | undefined)[],
-): GFF3FeatureLine {
-  return parseFieldsArrayImpl(f, false)
 }
 
 /**
@@ -487,46 +434,32 @@ export function parseAttributesJBrowseNoUnescape(
   parseAttributesJBrowseImpl(attrString, result, false)
 }
 
+const STRAND_MAP: Record<string, number | undefined> = {
+  '+': 1,
+  '-': -1,
+  '.': 0,
+}
+
 function parseFeatureJBrowseImpl(
   line: string,
   shouldUnescape: boolean,
 ): JBrowseFeature {
   const f = line.split('\t')
-  const seq_id = f[0]!
-  const source = f[1]!
-  const type = f[2]!
   const startStr = f[3]!
   const endStr = f[4]!
   const scoreStr = f[5]!
-  const strand = f[6]!
   const phase = f[7]!
   const attrString = f[8]!
 
   const result: JBrowseFeature = {
-    refName:
-      seq_id.length === 0 || seq_id === '.'
-        ? ''
-        : shouldUnescape
-          ? unescape(seq_id)
-          : seq_id,
-    source:
-      source.length === 0 || source === '.'
-        ? null
-        : shouldUnescape
-          ? unescape(source)
-          : source,
-    type:
-      type.length === 0 || type === '.'
-        ? null
-        : shouldUnescape
-          ? unescape(type)
-          : type,
-    start: startStr.length === 0 || startStr === '.' ? 0 : +startStr - 1,
-    end: endStr.length === 0 || endStr === '.' ? 0 : +endStr,
-    score: scoreStr.length === 0 || scoreStr === '.' ? undefined : +scoreStr,
-    strand:
-      strand === '+' ? 1 : strand === '-' ? -1 : strand === '.' ? 0 : undefined,
-    phase: phase.length === 0 || phase === '.' ? undefined : +phase,
+    refName: strField(f[0]!, shouldUnescape, ''),
+    source: strField(f[1]!, shouldUnescape, null),
+    type: strField(f[2]!, shouldUnescape, null),
+    start: isEmpty(startStr) ? 0 : +startStr - 1,
+    end: isEmpty(endStr) ? 0 : +endStr,
+    score: isEmpty(scoreStr) ? undefined : +scoreStr,
+    strand: STRAND_MAP[f[6]!],
+    phase: isEmpty(phase) ? undefined : +phase,
     subfeatures: [],
   }
 
