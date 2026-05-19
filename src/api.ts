@@ -86,13 +86,14 @@ export function parseRecords(records: ParseInput[]): GFF3Feature[] {
   const orphans = new Map<string, GFF3Feature[]>()
 
   for (const record of records) {
-    const featureLine = (
-      record.hasEscapes
-        ? parseFeature(record.line)
-        : parseFeatureNoUnescape(record.line)
-    ) as GFF3FeatureLineWithRefs
-    featureLine.child_features = []
-    featureLine.derived_features = []
+    const parsed = record.hasEscapes
+      ? parseFeature(record.line)
+      : parseFeatureNoUnescape(record.line)
+    const featureLine: GFF3FeatureLineWithRefs = {
+      ...parsed,
+      child_features: [],
+      derived_features: [],
+    }
 
     if (record.lineHash !== undefined) {
       featureLine.attributes ??= {}
