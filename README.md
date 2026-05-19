@@ -1,7 +1,7 @@
 # gff-nostream
 
 [![NPM version](https://img.shields.io/npm/v/gff-nostream.svg?style=flat-square)](https://npmjs.org/package/gff-nostream)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/GMOD/gff-nostream/publish.yml?branch=main)](https://github.com/GMOD/gff-nostream/actions?query=branch%3Amain+workflow%3APush+)
+![Build Status](https://img.shields.io/github/actions/workflow/status/GMOD/gff-nostream/publish.yml?branch=main)
 
 Parse GFF3 data. A simplified version of
 [@gmod/gff](https://github.com/GMOD/gff-js) with no Node.js stream dependency.
