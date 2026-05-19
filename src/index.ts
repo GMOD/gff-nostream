@@ -1,4 +1,5 @@
 export {
+  extractType,
   parseRecords,
   parseRecordsJBrowse,
   parseStringSync,

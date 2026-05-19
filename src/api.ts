@@ -11,14 +11,27 @@ import type {
   JBrowseFeature,
 } from './util.ts'
 
-export interface LineRecord {
+interface ParseInput {
   line: string
   lineHash?: string | number
-  /** Optional passthrough byte offsets — not used by the parser */
-  start?: number
-  /** Optional passthrough byte offsets — not used by the parser */
-  end?: number
   hasEscapes: boolean
+}
+
+export interface LineRecord extends ParseInput {
+  /** Genomic start coordinate from the tabix index (1-based) */
+  start: number
+  /** Genomic end coordinate from the tabix index */
+  end: number
+  /** GFF3 feature type (column 3) */
+  type: string
+}
+
+/** Extract the GFF3 feature type (column 3) from a raw line without a full split. */
+export function extractType(line: string): string {
+  const t1 = line.indexOf('\t')
+  const t2 = line.indexOf('\t', t1 + 1)
+  const t3 = line.indexOf('\t', t2 + 1)
+  return line.slice(t2 + 1, t3)
 }
 
 /**
@@ -44,7 +57,7 @@ export function parseStringSyncJBrowse(str: string): JBrowseFeature[] {
 
 function stringToRecords(str: string) {
   const lines = str.split(/\r?\n/)
-  const records: LineRecord[] = []
+  const records: ParseInput[] = []
   for (const line of lines) {
     if (line.startsWith('##FASTA') || line.startsWith('>')) {
       break
@@ -67,7 +80,7 @@ function stringToRecords(str: string) {
  * @param records - Array of LineRecord objects with raw line and metadata
  * @returns array of parsed features
  */
-export function parseRecords(records: LineRecord[]): GFF3Feature[] {
+export function parseRecords(records: ParseInput[]): GFF3Feature[] {
   const items: GFF3Feature[] = []
   const byId = new Map<string, GFF3Feature>()
   const orphans = new Map<string, GFF3Feature[]>()
@@ -153,7 +166,7 @@ export function parseRecords(records: LineRecord[]): GFF3Feature[] {
  * @param records - Array of LineRecord objects with raw line and metadata
  * @returns array of JBrowse-format features
  */
-export function parseRecordsJBrowse(records: LineRecord[]): JBrowseFeature[] {
+export function parseRecordsJBrowse(records: ParseInput[]): JBrowseFeature[] {
   const items: JBrowseFeature[] = []
   const byId = new Map<string, JBrowseFeature>()
   const orphans = new Map<string, JBrowseFeature[]>()
