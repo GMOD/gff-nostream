@@ -242,6 +242,20 @@ ctg123\t.\texon\t1050\t1500\t.\t+\t.\tID=exon1;Parent=mRNA00001`
     expect(mrna.subfeatures[0].id).toBe('exon1')
   })
 
+  it('attaches every segment of a multi-location child to its parent', () => {
+    const gff3 = `ctgA\t.\tgene\t1\t1000\t.\t+\t.\tID=gene1
+ctgA\t.\tmRNA\t1\t1000\t.\t+\t.\tID=mRNA1;Parent=gene1
+ctgA\t.\tCDS\t1\t100\t.\t+\t0\tID=cds1;Parent=mRNA1
+ctgA\t.\tCDS\t200\t300\t.\t+\t0\tID=cds1;Parent=mRNA1
+ctgA\t.\tCDS\t400\t500\t.\t+\t0\tID=cds1;Parent=mRNA1`
+
+    const result = parseStringSyncJBrowse(gff3)
+    const mrna = result[0].subfeatures[0]
+    const cds = mrna.subfeatures.filter(f => f.type === 'CDS')
+    expect(cds.length).toBe(3)
+    expect(cds.map(f => f.start)).toEqual([0, 199, 399])
+  })
+
   it('keeps multi-value attributes as arrays', () => {
     const gff3 = `chr1\t.\tgene\t100\t200\t.\t+\t.\tID=g1;Dbxref=GO:123,GO:456`
 

@@ -34,6 +34,33 @@ export function extractType(line: string): string {
   return line.slice(t2 + 1, t3)
 }
 
+/** Append a value to the array stored under key, creating the array if absent. */
+function appendOrphan<T>(orphans: Map<string, T[]>, key: string, value: T) {
+  const arr = orphans.get(key)
+  if (arr) {
+    arr.push(value)
+  } else {
+    orphans.set(key, [value])
+  }
+}
+
+/**
+ * The JBrowse parser collapses single-element attribute arrays to scalars, so a
+ * raw ID/Parent value can be a string, a string array, or absent. These coerce
+ * those `unknown` values without typecasts.
+ */
+function firstString(value: unknown): string | undefined {
+  const v: unknown = Array.isArray(value) ? value[0] : value
+  return typeof v === 'string' ? v : undefined
+}
+
+function toStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === 'string')
+  }
+  return typeof value === 'string' ? [value] : []
+}
+
 /**
  * Synchronously parse a string containing GFF3 and return an array of the
  * parsed items.
@@ -145,12 +172,7 @@ export function parseRecords(records: ParseInput[]): GFF3Feature[] {
             // so push once via the first line.
             parent[0]!.child_features.push(feature)
           } else {
-            let arr = orphans.get(parentId)
-            if (!arr) {
-              arr = []
-              orphans.set(parentId, arr)
-            }
-            arr.push(feature)
+            appendOrphan(orphans, parentId, feature)
           }
         }
       }
@@ -181,17 +203,18 @@ export function parseRecordsJBrowse(records: ParseInput[]): JBrowseFeature[] {
       feature._lineHash = String(record.lineHash)
     }
 
-    // attribute parsing collapses single-element arrays to scalars, so id can
-    // be string | string[]; defensively take the first if multi-valued.
-    const rawId = feature.id as string | string[] | undefined
-    const id = Array.isArray(rawId) ? rawId[0] : rawId
-    const parent = feature.parent as string | string[] | undefined
+    const id = firstString(feature.id)
+    const parents = toStringArray(feature.parent)
 
-    if (!id && !parent) {
+    if (!id && parents.length === 0) {
       items.push(feature)
-    } else if (!id || !byId.has(id)) {
-      if (id) {
-        if (!parent) {
+    } else {
+      // Register the id only the first time it is seen. Continuation lines
+      // (multi-location features such as a CDS spanning several segments share
+      // one ID across lines) skip registration but must still be attached to
+      // their parent below, so this is independent of the parent handling.
+      if (id && !byId.has(id)) {
+        if (parents.length === 0) {
           items.push(feature)
         }
         byId.set(id, feature)
@@ -204,20 +227,12 @@ export function parseRecordsJBrowse(records: ParseInput[]): JBrowseFeature[] {
         }
       }
 
-      if (parent) {
-        const parents = Array.isArray(parent) ? parent : [parent]
-        for (const parentId of parents) {
-          const parentFeature = byId.get(parentId)
-          if (parentFeature) {
-            parentFeature.subfeatures.push(feature)
-          } else {
-            let arr = orphans.get(parentId)
-            if (!arr) {
-              arr = []
-              orphans.set(parentId, arr)
-            }
-            arr.push(feature)
-          }
+      for (const parentId of parents) {
+        const parentFeature = byId.get(parentId)
+        if (parentFeature) {
+          parentFeature.subfeatures.push(feature)
+        } else {
+          appendOrphan(orphans, parentId, feature)
         }
       }
     }
