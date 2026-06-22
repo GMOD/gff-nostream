@@ -256,6 +256,20 @@ ctgA\t.\tCDS\t400\t500\t.\t+\t0\tID=cds1;Parent=mRNA1`
     expect(cds.map(f => f.start)).toEqual([0, 199, 399])
   })
 
+  it('keeps every segment of a top-level discontinuous feature', () => {
+    const gff3 = `ctgA\t.\tcDNA_match\t1050\t1500\t5.8e-42\t+\t.\tID=match1
+ctgA\t.\tcDNA_match\t5000\t5500\t8.1e-43\t+\t.\tID=match1
+ctgA\t.\tcDNA_match\t7000\t9000\t1.4e-40\t+\t.\tID=match1`
+
+    const result = parseStringSyncJBrowse(gff3)
+    expect(result.length).toBe(3)
+    expect(result.map(f => [f.start, f.end])).toEqual([
+      [1049, 1500],
+      [4999, 5500],
+      [6999, 9000],
+    ])
+  })
+
   it('keeps multi-value attributes as arrays', () => {
     const gff3 = `chr1\t.\tgene\t100\t200\t.\t+\t.\tID=g1;Dbxref=GO:123,GO:456`
 

@@ -209,14 +209,19 @@ export function parseRecordsJBrowse(records: ParseInput[]): JBrowseFeature[] {
     if (!id && parents.length === 0) {
       items.push(feature)
     } else {
+      // A parentless line is a top-level item. Every line of a top-level
+      // discontinuous feature (e.g. cDNA_match/EST_match spanning several
+      // segments under one shared ID, with no Parent) is its own top-level
+      // item, so push here regardless of whether the id is already registered.
+      if (parents.length === 0) {
+        items.push(feature)
+      }
+
       // Register the id only the first time it is seen. Continuation lines
       // (multi-location features such as a CDS spanning several segments share
       // one ID across lines) skip registration but must still be attached to
       // their parent below, so this is independent of the parent handling.
       if (id && !byId.has(id)) {
-        if (parents.length === 0) {
-          items.push(feature)
-        }
         byId.set(id, feature)
         const waiting = orphans.get(id)
         if (waiting) {
