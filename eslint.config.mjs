@@ -34,6 +34,7 @@ export default defineConfig(
   importPlugin.flatConfigs.recommended,
   {
     rules: {
+      '@typescript-eslint/parameter-properties': 'error',
       '@typescript-eslint/no-unused-vars': [
         'warn',
         {
