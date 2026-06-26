@@ -1,16 +1,10 @@
 import fs from 'fs'
 import { bench, describe } from 'vitest'
 
-import { parseStringSyncJBrowse, parseRecordsJBrowse } from '../src/api.ts'
+import { parseStringSync } from '../src/api.ts'
 import type { LineRecord } from '../src/api.ts'
-import {
-  parseFeatureJBrowse,
-  parseFeatureJBrowseNoUnescape,
-  parseAttributesJBrowse,
-  parseAttributesJBrowseNoUnescape,
-  unescape,
-} from '../src/util.ts'
-import type { JBrowseFeature } from '../src/util.ts'
+import { parseFeature, parseAttributes, unescape } from '../src/util.ts'
+import type { GffFeature } from '../src/util.ts'
 
 // The only optimization that showed improvement: avoid toLowerCase for common GFF3 attribute names
 const JBROWSE_DEFAULT_FIELDS = new Set([
@@ -166,7 +160,7 @@ function parseAttributesJBrowseNoUnescapeOptimized(
   }
 }
 
-function parseFeatureJBrowseOptimized(line: string): JBrowseFeature {
+function parseFeatureJBrowseOptimized(line: string): GffFeature {
   const f = line.split('\t')
   const seq_id = f[0]!
   const source = f[1]!
@@ -181,7 +175,7 @@ function parseFeatureJBrowseOptimized(line: string): JBrowseFeature {
   const strandVal =
     strand === '+' ? 1 : strand === '-' ? -1 : strand === '.' ? 0 : undefined
 
-  const result: JBrowseFeature = {
+  const result: GffFeature = {
     refName: seq_id.length === 0 || seq_id === '.' ? '' : unescape(seq_id),
     source: source.length === 0 || source === '.' ? null : unescape(source),
     type: type.length === 0 || type === '.' ? null : unescape(type),
@@ -197,7 +191,7 @@ function parseFeatureJBrowseOptimized(line: string): JBrowseFeature {
   return result
 }
 
-function parseFeatureJBrowseNoUnescapeOptimized(line: string): JBrowseFeature {
+function parseFeatureJBrowseNoUnescapeOptimized(line: string): GffFeature {
   const f = line.split('\t')
   const seq_id = f[0]!
   const source = f[1]!
@@ -212,7 +206,7 @@ function parseFeatureJBrowseNoUnescapeOptimized(line: string): JBrowseFeature {
   const strandVal =
     strand === '+' ? 1 : strand === '-' ? -1 : strand === '.' ? 0 : undefined
 
-  const result: JBrowseFeature = {
+  const result: GffFeature = {
     refName: seq_id.length === 0 || seq_id === '.' ? '' : seq_id,
     source: source.length === 0 || source === '.' ? null : source,
     type: type.length === 0 || type === '.' ? null : type,
@@ -228,10 +222,10 @@ function parseFeatureJBrowseNoUnescapeOptimized(line: string): JBrowseFeature {
   return result
 }
 
-function parseRecordsJBrowseOptimized(records: LineRecord[]): JBrowseFeature[] {
-  const items: JBrowseFeature[] = []
-  const byId = new Map<string, JBrowseFeature>()
-  const orphans = new Map<string, JBrowseFeature[]>()
+function parseRecordsJBrowseOptimized(records: LineRecord[]): GffFeature[] {
+  const items: GffFeature[] = []
+  const byId = new Map<string, GffFeature>()
+  const orphans = new Map<string, GffFeature[]>()
 
   for (let i = 0; i < records.length; i++) {
     const record = records[i]!
@@ -314,7 +308,7 @@ function stringToRecords(str: string) {
   return records
 }
 
-function parseStringSyncJBrowseOptimized(str: string): JBrowseFeature[] {
+function parseStringSyncJBrowseOptimized(str: string): GffFeature[] {
   return parseRecordsJBrowseOptimized(stringToRecords(str))
 }
 
@@ -324,7 +318,7 @@ describe('parseAttributesJBrowse - common attrs', () => {
 
   bench('current', () => {
     const result: Record<string, unknown> = {}
-    parseAttributesJBrowse(attrs, result)
+    parseAttributes(attrs, result, true)
   })
 
   bench('common attr lookup', () => {
@@ -340,7 +334,7 @@ describe('parseAttributesJBrowse - uncommon attrs', () => {
 
   bench('current', () => {
     const result: Record<string, unknown> = {}
-    parseAttributesJBrowse(attrs, result)
+    parseAttributes(attrs, result, true)
   })
 
   bench('common attr lookup', () => {
@@ -355,7 +349,7 @@ describe('parseFeatureJBrowse - single line', () => {
     'chr1\tAraport11\tgene\t3631\t5899\t.\t+\t.\tID=AT1G01010;Name=NAC001;Note=NAC domain containing protein 1'
 
   bench('current', () => {
-    parseFeatureJBrowse(line)
+    parseFeature(line, true)
   })
 
   bench('optimized', () => {
@@ -370,7 +364,7 @@ describe('parseStringSyncJBrowse - large file (tair10_chr1)', () => {
   bench(
     'current',
     () => {
-      parseStringSyncJBrowse(data)
+      parseStringSync(data)
     },
     { iterations: 50, warmupIterations: 5 },
   )
@@ -389,7 +383,7 @@ describe('parseStringSyncJBrowse - medium file (au9)', () => {
   const data = fs.readFileSync('test/data/au9_scaffold_subset.gff3', 'utf8')
 
   bench('current', () => {
-    parseStringSyncJBrowse(data)
+    parseStringSync(data)
   })
 
   bench('optimized (common attr lookup)', () => {
@@ -402,7 +396,7 @@ describe('parseStringSyncJBrowse - messy file', () => {
   const data = fs.readFileSync('test/data/messy_protein_domains.gff3', 'utf8')
 
   bench('current', () => {
-    parseStringSyncJBrowse(data)
+    parseStringSync(data)
   })
 
   bench('optimized (common attr lookup)', () => {
