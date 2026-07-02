@@ -1,6 +1,6 @@
 {
   "name": "gff-nostream",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "description": "utilities to read GFF3 data",
   "license": "MIT",
   "repository": {
