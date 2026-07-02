@@ -2,9 +2,18 @@ import fs from 'fs'
 import { bench, describe } from 'vitest'
 
 import { parseStringSync } from '../src/api.ts'
-import type { LineRecord } from '../src/api.ts'
 import { parseFeature, parseAttributes, unescape } from '../src/util.ts'
 import type { GffFeature } from '../src/util.ts'
+
+// Local record shape for the optimization-variant harness below; the shipped
+// `parseRecords` now derives the unescape flag itself from the line.
+interface LineRecord {
+  line: string
+  lineHash?: string | number
+  start: number
+  end: number
+  hasEscapes: boolean
+}
 
 // The only optimization that showed improvement: avoid toLowerCase for common GFF3 attribute names
 const JBROWSE_DEFAULT_FIELDS = new Set([
@@ -349,7 +358,7 @@ describe('parseFeatureJBrowse - single line', () => {
     'chr1\tAraport11\tgene\t3631\t5899\t.\t+\t.\tID=AT1G01010;Name=NAC001;Note=NAC domain containing protein 1'
 
   bench('current', () => {
-    parseFeature(line, true)
+    parseFeature(line)
   })
 
   bench('optimized', () => {

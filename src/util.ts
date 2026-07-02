@@ -175,15 +175,15 @@ export function parseAttributes(
 }
 
 /**
- * Parse a GFF3 feature line. Pass shouldUnescape=false as a fast path for data
- * known to contain no escaped characters.
+ * Parse a GFF3 feature line. Unescaping is skipped entirely for lines with no
+ * '%' character, which is the common case.
  *
  * @param line - GFF3 feature line
- * @param shouldUnescape - whether to unescape percent-encoded values
  * @returns The parsed feature
  */
-export function parseFeature(line: string, shouldUnescape: boolean): GffFeature {
+export function parseFeature(line: string): GffFeature {
   const f = line.split('\t')
+  const shouldUnescape = line.includes('%')
   const startStr = f[3]!
   const endStr = f[4]!
   const scoreStr = f[5]!

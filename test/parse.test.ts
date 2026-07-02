@@ -152,27 +152,25 @@ ctg\t.\tmRNA\t1\t5\t.\t+\t.\tID=m;Parent=a`,
     expect(result[0]!.name).toBe('Test Gene')
   })
 
-  it('parseRecords propagates lineHash', () => {
+  it('parseRecords pairs each top-level feature with its originating record', () => {
     const records = [
       {
-        line: 'ctg123\t.\tgene\t1000\t9000\t.\t+\t.\tID=gene00001',
-        lineHash: 'offset123',
-        start: 1000,
-        end: 9000,
-        hasEscapes: false,
+        line: 'ctg123\t.\tmRNA\t1050\t9000\t.\t+\t.\tID=mRNA00001;Parent=gene00001',
+        offset: 456,
       },
       {
-        line: 'ctg123\t.\tmRNA\t1050\t9000\t.\t+\t.\tID=mRNA00001;Parent=gene00001',
-        lineHash: 456,
-        start: 1050,
-        end: 9000,
-        hasEscapes: false,
+        line: 'ctg123\t.\tgene\t1000\t9000\t.\t+\t.\tID=gene00001',
+        offset: 123,
       },
     ]
     const result = parseRecords(records)
+
+    // only the parentless gene is top-level; the mRNA (seen first) is an orphan
+    // that gets nested once its parent appears
     expect(result.length).toBe(1)
-    expect(result[0]!._lineHash).toBe('offset123')
-    expect(result[0]!.subfeatures[0]!._lineHash).toBe('456')
+    expect(result[0]!.record.offset).toBe(123)
+    expect(result[0]!.feature.type).toBe('gene')
+    expect(result[0]!.feature.subfeatures[0]!.type).toBe('mRNA')
   })
 })
 

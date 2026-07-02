@@ -77,25 +77,36 @@ to its parent (or kept as a top-level item) independently.
 Synchronously parse a GFF3 string and return an array of features. Comments,
 directives, and `##FASTA` sections are ignored.
 
-### `parseRecords(records: LineRecord[]): GffFeature[]`
+### `parseRecords<R>(records: readonly R[]): ParsedRecord<R>[]`
 
-Parse an array of `LineRecord` objects. Useful when managing raw line data
-directly (e.g. from a tabix-indexed file with byte offsets).
+Parse an array of records wrapping raw GFF3 lines. Useful when managing raw line
+data directly (e.g. from a tabix-indexed file). Each top-level feature is
+returned paired with the record it came from, so a caller can attach its own
+stable id (a byte offset, a hash, …) without the parser stamping anything onto
+the feature. Records may carry extra fields (`R` is inferred), which pass
+through untouched on `record`.
+
+```ts
+const features = parseRecords(
+  lines.map(line => ({ line, offset })),
+).map(({ feature, record }) => ({ ...feature, id: record.offset }))
+```
 
 ### `extractType(line: string): string`
 
 Extract the feature type (GFF3 column 3) from a raw line without fully splitting
 it.
 
-### `LineRecord`
+### `LineRecord` / `ParsedRecord`
 
 ```ts
 interface LineRecord {
   line: string
-  hasEscapes: boolean // set true when line contains '%' to enable URL-decoding
-  lineHash?: string | number // propagated to the feature's _lineHash field
-  start?: number // byte offset passthrough (not used by the parser)
-  end?: number // byte offset passthrough (not used by the parser)
+}
+
+interface ParsedRecord<R extends LineRecord = LineRecord> {
+  feature: GffFeature
+  record: R // the input record this top-level feature was parsed from
 }
 ```
 
