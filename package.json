@@ -1,6 +1,7 @@
 {
   "name": "gff-nostream",
   "version": "5.1.0",
+  "packageManager": "pnpm@11.15.1",
   "description": "utilities to read GFF3 data",
   "license": "MIT",
   "repository": {
@@ -8,6 +9,7 @@
     "url": "https://github.com/GMOD/gff-nostream.git"
   },
   "type": "module",
+  "sideEffects": false,
   "main": "dist/index.js",
   "exports": {
     "import": "./esm/index.js",
