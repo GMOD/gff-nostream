@@ -169,6 +169,52 @@ export interface GffFeature {
   [key: string]: unknown
 }
 
+/** Index of `char` at or after `from`, or `end` if it does not occur before it. */
+function indexOrEnd(s: string, char: string, from: number, end: number) {
+  const idx = s.indexOf(char, from)
+  return idx === -1 || idx > end ? end : idx
+}
+
+/** Raw lines handed to parseRecords can still carry their line terminator. */
+function trimLineEnd(s: string) {
+  let end = s.length
+  if (s[end - 1] === '\n') {
+    end -= s[end - 2] === '\r' ? 2 : 1
+  }
+  return end === s.length ? s : s.slice(0, end)
+}
+
+/** Feature key an attribute tag is stored under: lowercased, and suffixed if reserved. */
+function attributeKey(tag: string) {
+  const common = COMMON_ATTRS[tag]
+  if (common === undefined) {
+    const key = tag.toLowerCase()
+    return JBROWSE_DEFAULT_FIELDS.has(key) ? `${key}2` : key
+  } else {
+    return common
+  }
+}
+
+/** Comma-separated attribute values between `from` and `end`. */
+function parseValues(
+  s: string,
+  from: number,
+  end: number,
+  shouldUnescape: boolean,
+) {
+  const values: string[] = []
+  let valStart = from
+  while (valStart < end) {
+    const commaIdx = indexOrEnd(s, ',', valStart, end)
+    if (commaIdx > valStart) {
+      const val = s.slice(valStart, commaIdx)
+      values.push(shouldUnescape ? unescape(val) : val)
+    }
+    valStart = commaIdx + 1
+  }
+  return values
+}
+
 /**
  * Parse the 9th column (attributes) of a GFF3 feature line into `result`,
  * lowercasing keys and suffixing any that collide with a default field name.
@@ -187,50 +233,21 @@ export function parseAttributes(
     return
   }
 
-  let len = attrString.length
-  if (attrString[len - 1] === '\n') {
-    len = attrString[len - 2] === '\r' ? len - 2 : len - 1
-    attrString = attrString.slice(0, len)
-  }
+  const attrs = trimLineEnd(attrString)
+  const len = attrs.length
 
   let start = 0
   while (start < len) {
-    let semiIdx = attrString.indexOf(';', start)
-    if (semiIdx === -1) {
-      semiIdx = len
-    }
+    const semiIdx = indexOrEnd(attrs, ';', start, len)
+    const eqIdx = attrs.indexOf('=', start)
 
-    if (semiIdx > start) {
-      const eqIdx = attrString.indexOf('=', start)
-      if (eqIdx !== -1 && eqIdx < semiIdx && eqIdx + 1 < semiIdx) {
-        const tag = attrString.slice(start, eqIdx)
-        let key = COMMON_ATTRS[tag]
-        if (key === undefined) {
-          key = tag.toLowerCase()
-          if (JBROWSE_DEFAULT_FIELDS.has(key)) {
-            key += '2'
-          }
-        }
-
-        const values: string[] = []
-        let valStart = eqIdx + 1
-        while (valStart < semiIdx) {
-          let commaIdx = attrString.indexOf(',', valStart)
-          if (commaIdx === -1 || commaIdx > semiIdx) {
-            commaIdx = semiIdx
-          }
-          if (commaIdx > valStart) {
-            const val = attrString.slice(valStart, commaIdx)
-            values.push(shouldUnescape ? unescape(val) : val)
-          }
-          valStart = commaIdx + 1
-        }
-
-        // `Foo=,,` has no values at all, same as the `Foo=` that the eqIdx
-        // check above already rejects, so don't leave an empty array behind
-        if (values.length !== 0) {
-          result[key] = values.length === 1 ? values[0] : values
-        }
+    // Nothing to store for a tag whose '=' belongs to a later attribute, or
+    // that has no value before the next ';' — including `Foo=` and `Foo=,,`
+    if (eqIdx !== -1 && eqIdx + 1 < semiIdx) {
+      const values = parseValues(attrs, eqIdx + 1, semiIdx, shouldUnescape)
+      if (values.length !== 0) {
+        const key = attributeKey(attrs.slice(start, eqIdx))
+        result[key] = values.length === 1 ? values[0] : values
       }
     }
     start = semiIdx + 1
