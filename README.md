@@ -35,7 +35,8 @@ Features are returned as flat objects with coordinates converted to 0-based
 half-open, `strand` as a number (`1`/`-1`/`0`), attributes spread as lowercase
 top-level keys, single-valued attributes unwrapped from their array, and child
 features nested under `subfeatures`. An attribute whose lowercased name collides
-with a built-in field (e.g. `Start`, `Type`) is suffixed with `2` (`start2`,
+with a built-in field (`start`, `end`, `seq_id`, `refname`, `score`, `type`,
+`source`, `phase`, `strand`, `subfeatures`) is suffixed with `2` (`start2`,
 `type2`).
 
 A gene with an mRNA child:
@@ -70,6 +71,11 @@ Multi-location features (the same ID on multiple lines, such as a CDS spanning
 several segments) are not merged — each line is its own flat feature, attached
 to its parent (or kept as a top-level item) independently.
 
+A feature whose `Parent` is never defined in the input — common when parsing a
+slice of a file, e.g. a tabix region query that cuts off the parent line — is
+returned as a top-level feature, after the features that appeared in the input,
+rather than being dropped.
+
 ## API
 
 ### `parseStringSync(str: string): GffFeature[]`
@@ -87,9 +93,9 @@ the feature. Records may carry extra fields (`R` is inferred), which pass
 through untouched on `record`.
 
 ```ts
-const features = parseRecords(
-  lines.map(line => ({ line, offset })),
-).map(({ feature, record }) => ({ ...feature, id: record.offset }))
+const features = parseRecords(lines.map(line => ({ line, offset }))).map(
+  ({ feature, record }) => ({ ...feature, id: record.offset }),
+)
 ```
 
 ### `extractType(line: string): string`

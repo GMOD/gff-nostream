@@ -2,7 +2,7 @@ import fs from 'node:fs'
 
 import { describe, expect, it } from 'vitest'
 
-import { parseRecords, parseStringSync } from '../src/index.ts'
+import { extractType, parseRecords, parseStringSync } from '../src/index.ts'
 import { unescape } from '../src/util.ts'
 
 describe('GFF3 parser', () => {
@@ -172,6 +172,73 @@ ctg\t.\tmRNA\t1\t5\t.\t+\t.\tID=m;Parent=a`,
     expect(result[0]!.feature.type).toBe('gene')
     expect(result[0]!.feature.subfeatures[0]!.type).toBe('mRNA')
   })
+
+  it('keeps features whose Parent never appears in the input', () => {
+    const result = parseStringSync(
+      `ctgA\t.\tmRNA\t1\t100\t.\t+\t.\tID=m1;Parent=missing_gene
+ctgA\t.\texon\t1\t50\t.\t+\t.\tID=e1;Parent=m1`,
+    )
+    expect(result.length).toBe(1)
+    expect(result[0]!.id).toBe('m1')
+    expect(result[0]!.subfeatures[0]!.id).toBe('e1')
+  })
+
+  it('does not duplicate a feature that has one resolved and one missing parent', () => {
+    const result = parseStringSync(
+      `ctgA\t.\tgene\t1\t1000\t.\t+\t.\tID=g1
+ctgA\t.\texon\t1\t50\t.\t+\t.\tID=e1;Parent=g1,missing_gene`,
+    )
+    expect(result.length).toBe(1)
+    expect(result[0]!.id).toBe('g1')
+    expect(result[0]!.subfeatures.length).toBe(1)
+  })
+
+  it('parseRecords keeps orphans paired with their record', () => {
+    const records = [
+      { line: 'ctgA\t.\texon\t1\t50\t.\t+\t.\tParent=missing', offset: 7 },
+    ]
+    const result = parseRecords(records)
+    expect(result.length).toBe(1)
+    expect(result[0]!.record.offset).toBe(7)
+    expect(result[0]!.feature.type).toBe('exon')
+  })
+
+  it('suffixes an attribute that would overwrite the subfeatures array', () => {
+    const result = parseStringSync(
+      `chr1\t.\tgene\t1\t100\t.\t+\t.\tID=g1;Subfeatures=weird
+chr1\t.\texon\t1\t50\t.\t+\t.\tParent=g1`,
+    )
+    expect(result[0]!.subfeatures2).toBe('weird')
+    expect(result[0]!.subfeatures.length).toBe(1)
+  })
+
+  it('parses truncated lines without throwing', () => {
+    const result = parseStringSync('chr1\t.\tgene\t100\t200\t.\t+\t.')
+    expect(result.length).toBe(1)
+    expect(result[0]!.type).toBe('gene')
+    expect(result[0]!.start).toBe(99)
+    expect(parseStringSync('chr1')[0]!.refName).toBe('chr1')
+  })
+
+  it('ignores an attribute whose value list is empty', () => {
+    const result = parseStringSync(
+      'chr1\t.\tgene\t1\t100\t.\t+\t.\tID=g1;Foo=,,;Bar=',
+    )
+    expect(result[0]!.foo).toBeUndefined()
+    expect(result[0]!.bar).toBeUndefined()
+  })
+})
+
+describe('extractType', () => {
+  it('reads column 3 of a full line', () => {
+    expect(extractType('chr1\t.\tgene\t1\t100\t.\t+\t.\tID=g1')).toBe('gene')
+  })
+
+  it('handles lines that end at or before the type column', () => {
+    expect(extractType('chr1\t.\tgene')).toBe('gene')
+    expect(extractType('chr1\t.')).toBe('')
+    expect(extractType('chr1')).toBe('')
+  })
 })
 
 describe('unescape', () => {
@@ -185,5 +252,25 @@ describe('unescape', () => {
   it('does not let an invalid escape swallow a following valid one', () => {
     expect(unescape('a%b%20c')).toBe('a%b c')
     expect(unescape('a%20%xy%21b')).toBe('a %xy!b')
+  })
+
+  it('decodes escaped multi-byte UTF-8 characters', () => {
+    expect(unescape('%E3%81%82%E3%81%82')).toBe('ああ')
+    expect(unescape('caf%C3%A9')).toBe('café')
+    expect(unescape('a%20%E3%81%82%2Cb')).toBe('a あ,b')
+    expect(unescape('%F0%9F%A7%AC')).toBe('🧬')
+    const sample = 'あ漢字🧬 é ñ ü ; = , %'
+    expect(unescape(encodeURIComponent(sample))).toBe(sample)
+  })
+
+  it('replaces bytes that are not valid UTF-8', () => {
+    expect(unescape('caf%E9')).toBe('caf�')
+  })
+
+  it('decodes escapes regardless of hex digit case', () => {
+    expect(unescape('a%2Fb')).toBe('a/b')
+    expect(unescape('a%2fb')).toBe('a/b')
+    expect(unescape('a%eFb')).toBe(unescape('a%EFb'))
+    expect(unescape('a%Efb')).toBe(unescape('a%EFb'))
   })
 })
