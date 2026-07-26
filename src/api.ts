@@ -121,6 +121,52 @@ function isUnparented(feature: GffFeature, byId: Map<string, GffFeature>) {
   return !toStringArray(feature.parent).some(parentId => byId.has(parentId))
 }
 
+/*
+ * The three entry points below run the same link-and-collect loop over
+ * differently-shaped input. Routing them through one core that reads lines via
+ * a callback was tried and reverted — it put every caller on a shared
+ * polymorphic call site for no measured gain. The duplication is deliberate;
+ * keep the three loops in sync by hand.
+ */
+
+/**
+ * Parse an array of raw GFF3 feature lines, resolving parent/child
+ * relationships into `subfeatures`. The lines must already be free of blanks,
+ * comments, and any `##FASTA` section — this is the entry point for a caller
+ * that has split and filtered the file itself (a tabix region query, or a
+ * whole-file scan grouping lines by reference sequence) and has no per-line
+ * identity to carry through.
+ * Features whose Parent is never defined in `lines` are returned at the end as
+ * top-level items rather than dropped.
+ *
+ * @param lines - raw GFF3 feature lines
+ * @returns top-level features
+ */
+export function parseLines(lines: readonly string[]): GffFeature[] {
+  const items: GffFeature[] = []
+  const pending: GffFeature[] = []
+  const byId = new Map<string, GffFeature>()
+  const orphans = new Map<string, GffFeature[]>()
+
+  for (const line of lines) {
+    const feature = parseFeature(line)
+    const status = linkFeature(feature, byId, orphans)
+    if (status === 'top-level') {
+      items.push(feature)
+    } else if (status === 'orphaned') {
+      pending.push(feature)
+    }
+  }
+
+  for (const feature of pending) {
+    if (isUnparented(feature, byId)) {
+      items.push(feature)
+    }
+  }
+
+  return items
+}
+
 /**
  * Synchronously parse a string containing GFF3 and return an array of the
  * parsed features. Comments, directives, and `##FASTA` sections are ignored.
@@ -137,6 +183,9 @@ export function parseStringSync(str: string): GffFeature[] {
   const orphans = new Map<string, GffFeature[]>()
   const pending: GffFeature[] = []
 
+  // filters and parses in one pass rather than collecting the kept lines and
+  // handing them to parseLines, which would hold a second array the size of the
+  // file alongside the split
   for (const line of str.split(/\r?\n/)) {
     if (line.startsWith('##FASTA') || line.startsWith('>')) {
       break

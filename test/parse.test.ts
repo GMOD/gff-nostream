@@ -2,7 +2,12 @@ import fs from 'node:fs'
 
 import { describe, expect, it } from 'vitest'
 
-import { extractType, parseRecords, parseStringSync } from '../src/index.ts'
+import {
+  extractType,
+  parseLines,
+  parseRecords,
+  parseStringSync,
+} from '../src/index.ts'
 import { unescape } from '../src/util.ts'
 
 describe('GFF3 parser', () => {
@@ -191,6 +196,35 @@ ctgA\t.\texon\t1\t50\t.\t+\t.\tID=e1;Parent=g1,missing_gene`,
     expect(result.length).toBe(1)
     expect(result[0]!.id).toBe('g1')
     expect(result[0]!.subfeatures.length).toBe(1)
+  })
+
+  it('parseLines nests children whose parent appears later', () => {
+    const result = parseLines([
+      'ctgA\t.\texon\t1\t50\t.\t+\t.\tID=e1;Parent=m1',
+      'ctgA\t.\tmRNA\t1\t100\t.\t+\t.\tID=m1;Parent=g1',
+      'ctgA\t.\tgene\t1\t1000\t.\t+\t.\tID=g1',
+    ])
+    expect(result.length).toBe(1)
+    expect(result[0]!.id).toBe('g1')
+    expect(result[0]!.subfeatures[0]!.id).toBe('m1')
+    expect(result[0]!.subfeatures[0]!.subfeatures[0]!.id).toBe('e1')
+  })
+
+  it('parseLines returns a feature whose parent never appears', () => {
+    const result = parseLines([
+      'ctgA\t.\tgene\t1\t1000\t.\t+\t.\tID=g1',
+      'ctgA\t.\texon\t1\t50\t.\t+\t.\tID=e1;Parent=missing',
+    ])
+    // dangling-parent features come after the genuine top-level ones
+    expect(result.map(f => f.id)).toEqual(['g1', 'e1'])
+  })
+
+  it('parseLines agrees with parseStringSync on a real file', () => {
+    const str = fs.readFileSync('test/data/spec_eden.gff3', 'utf8')
+    const lines = str
+      .split('\n')
+      .filter(line => line.length !== 0 && !line.startsWith('#'))
+    expect(parseLines(lines)).toEqual(parseStringSync(str))
   })
 
   it('parseRecords keeps orphans paired with their record', () => {
