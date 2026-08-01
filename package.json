@@ -38,8 +38,7 @@
     "postversion": "git push --follow-tags",
     "build": "pnpm build:esm && pnpm build:es5",
     "benchonly": "vitest bench",
-    "bench": "./scripts/build-both-branches.sh \"$BRANCH1\" \"$BRANCH2\" && vitest bench",
-    "prepublishOnly": "pnpm test --run && pnpm build"
+    "bench": "./scripts/build-both-branches.sh \"$BRANCH1\" \"$BRANCH2\" && vitest bench"
   },
   "keywords": [
     "bionode",
