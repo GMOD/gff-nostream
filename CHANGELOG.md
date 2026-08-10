@@ -1,3 +1,59 @@
+## [5.1.3](https://github.com/GMOD/gff-nostream/compare/v5.1.2...v5.1.3) (2026-08-10)
+
+### Chores
+
+- Drop prepublishOnly and the redundant pull_request workflow
+- Add git-cliff for changelog generation
+- Type-check the tests and enforce prettier, as @gmod/bam does
+- Let npm publish stop auto-correcting repository.url
+- Exempt our own packages from the release quarantine
+- Bump pnpm/action-setup to v6.0.10
+- Run the test suite as `pnpm test --run`
+- Gate preversion on format:check, as CI does
+- Gate preversion on typecheck too, as CI does
+- Converge package.json on the shape its siblings use
+
+### Documentation
+
+- Mark breaking changes in the generated changelog
+
+### Other Changes
+
+- Backfill CHANGELOG.md for v0.0.1 through v5.1.2
+
+Reconstructed from git diffs rather than commit messages, since a large
+fraction of the history's messages (bump commits, "Bugfixes", "WIP on
+main: ...", stash artifacts) don't describe the actual change.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01AQaLtc16h1NPYVqk3HZwDp
+- Revert "chore: converge package.json" — the CHANGELOG prettier step
+
+Removes `prettier --write CHANGELOG.md` from the `version` script, which the
+previous commit added on a premise I did not check.
+
+The reasoning was: git-cliff writes CHANGELOG.md after `preversion` has run, so
+the format:check gate structurally cannot see it, while CI checks it on the tag
+commit -- a hole the gate cannot cover. The first half is true. The second is
+not: **every one of the 20 repos already lists CHANGELOG.md in
+.prettierignore**, so CI's format:check skips it too and there was never a hole.
+
+The step was also a no-op, verified rather than assumed: prettier skips an
+ignored file even when it is named explicitly on the command line, so a
+deliberately mangled CHANGELOG.md came back unchanged.
+
+hclust was the only repo that had this step, which is where I copied it from.
+It is reverted there too. The .prettierignore comments in bgzf-filehandle,
+cram-js and hclust say why nobody should add it back: reformatting a generated
+changelog fights the generator on every release.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+### Tests
+
+- Pin the shared-ID linking path in the shapes it broke in
+- Correct the note -- the regression never reached a release
+
 # Unreleased
 
 - Drop the redundant `prepublishOnly` script and `pull_request.yml` workflow: `preversion` already gates local publishes and the push workflow's `test` job already gates CI, so both were a third redundant run. `pull_request.yml` only added coverage for fork PRs, which this project's CI convention deliberately excludes. No user-facing change.
