@@ -118,6 +118,66 @@ ctgA\t.\tcDNA_match\t7000\t9000\t1.4e-40\t+\t.\tID=match1`,
     ])
   })
 
+  // The four below guard the same code path as the two above, in the shapes
+  // that path is easiest to get wrong. It regressed once: 3.0.6 through 3.0.9
+  // registered a shared ID per line and dropped the continuation lines, so a
+  // GENCODE transcript came out with one CDS of its four while all its exons
+  // survived (exons carry unique IDs, CDS segments share one). It shipped in
+  // @jbrowse/plugin-gff3@4.3.0 and silently shortened every translated protein.
+  // Keep these even if they look redundant — the two tests above pass under
+  // several ways of getting this wrong.
+
+  it('attaches continuation lines that arrive before their parent', () => {
+    const result = parseStringSync(
+      `ctgA\t.\tCDS\t1\t100\t.\t+\t0\tID=cds1;Parent=mRNA1
+ctgA\t.\tCDS\t200\t300\t.\t+\t0\tID=cds1;Parent=mRNA1
+ctgA\t.\tCDS\t400\t500\t.\t+\t0\tID=cds1;Parent=mRNA1
+ctgA\t.\tmRNA\t1\t500\t.\t+\t.\tID=mRNA1`,
+    )
+    const cds = result[0]!.subfeatures.filter(f => f.type === 'CDS')
+    expect(cds.map(f => f.start)).toEqual([0, 199, 399])
+  })
+
+  it('attaches continuation lines interleaved with uniquely-identified siblings', () => {
+    const result = parseStringSync(
+      `ctgA\t.\tmRNA\t1\t500\t.\t+\t.\tID=mRNA1
+ctgA\t.\tCDS\t1\t100\t.\t+\t0\tID=cds1;Parent=mRNA1
+ctgA\t.\texon\t1\t100\t.\t+\t.\tID=exon1;Parent=mRNA1
+ctgA\t.\tCDS\t200\t300\t.\t+\t0\tID=cds1;Parent=mRNA1
+ctgA\t.\texon\t200\t300\t.\t+\t.\tID=exon2;Parent=mRNA1
+ctgA\t.\tCDS\t400\t500\t.\t+\t0\tID=cds1;Parent=mRNA1`,
+    )
+    const subs = result[0]!.subfeatures
+    expect(subs.filter(f => f.type === 'CDS').map(f => f.start)).toEqual([
+      0, 199, 399,
+    ])
+    expect(subs.filter(f => f.type === 'exon').length).toBe(2)
+  })
+
+  it('gives every parent the full set of a multi-parent shared ID', () => {
+    const result = parseStringSync(
+      `ctgA\t.\tmRNA\t1\t500\t.\t+\t.\tID=mRNA1
+ctgA\t.\tmRNA\t1\t500\t.\t+\t.\tID=mRNA2
+ctgA\t.\tCDS\t1\t100\t.\t+\t0\tID=cds1;Parent=mRNA1,mRNA2
+ctgA\t.\tCDS\t200\t300\t.\t+\t0\tID=cds1;Parent=mRNA1,mRNA2`,
+    )
+    for (const mrna of result) {
+      expect(mrna.subfeatures.filter(f => f.type === 'CDS').length).toBe(2)
+    }
+  })
+
+  it('keeps two transcripts’ shared-ID CDS sets apart', () => {
+    const result = parseStringSync(
+      `ctgA\t.\tmRNA\t1\t500\t.\t+\t.\tID=mRNA1
+ctgA\t.\tCDS\t1\t100\t.\t+\t0\tID=cds1;Parent=mRNA1
+ctgA\t.\tCDS\t200\t300\t.\t+\t0\tID=cds1;Parent=mRNA1
+ctgA\t.\tmRNA\t1\t500\t.\t+\t.\tID=mRNA2
+ctgA\t.\tCDS\t1\t100\t.\t+\t0\tID=cds2;Parent=mRNA2
+ctgA\t.\tCDS\t200\t300\t.\t+\t0\tID=cds2;Parent=mRNA2`,
+    )
+    expect(result.map(m => m.subfeatures.length)).toEqual([2, 2])
+  })
+
   it('keeps multi-value attributes as arrays', () => {
     const result = parseStringSync(
       'chr1\t.\tgene\t100\t200\t.\t+\t.\tID=g1;Dbxref=GO:123,GO:456',
