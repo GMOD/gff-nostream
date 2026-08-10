@@ -122,10 +122,13 @@ ctgA\t.\tcDNA_match\t7000\t9000\t1.4e-40\t+\t.\tID=match1`,
   // that path is easiest to get wrong. It regressed once: 3.0.6 through 3.0.9
   // registered a shared ID per line and dropped the continuation lines, so a
   // GENCODE transcript came out with one CDS of its four while all its exons
-  // survived (exons carry unique IDs, CDS segments share one). It shipped in
-  // @jbrowse/plugin-gff3@4.3.0 and silently shortened every translated protein.
-  // Keep these even if they look redundant — the two tests above pass under
-  // several ways of getting this wrong.
+  // survived — exons carry unique IDs, CDS segments share one, which is what
+  // made it look like a rendering quirk rather than a parse bug. Consumers
+  // translate from the full CDS set, so the visible symptom was a silently
+  // shortened protein (NRAS 190aa -> 40aa) with nothing reporting an error.
+  // It reached no release: jbrowse's lockfile sat on a bad version for thirteen
+  // days on main and never in a tag. Keep these even if they look redundant —
+  // the two tests above pass under several ways of getting this wrong.
 
   it('attaches continuation lines that arrive before their parent', () => {
     const result = parseStringSync(
