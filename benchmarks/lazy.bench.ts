@@ -13,35 +13,36 @@ import { getAttribute, parseLines, parseLinesLazy } from '../src/index.ts'
  * and taking per-run medians put the real figure at 2.7x. Treat a difference
  * under ~1.5x here as noise, and interleave before believing anything.
  *
- * Absolute times drift by 2x between runs on the same machine, so only the
- * within-run ratio means anything. Fairly measured (medians of 25 interleaved
- * runs, node 24):
+ * The fixture matters more than the timing method, and an earlier version of
+ * this comment was wrong about the size of the effect because of it. Do NOT
+ * size a GFF3 fixture up by concatenating a real file: ids repeat across the
+ * copies, so every duplicate child attaches to the first parent carrying its
+ * id. Twelve copies of a GENCODE excerpt gave 233 subfeatures per top-level
+ * feature, against 12 in real tair10_chr1. That deepens the tree rather than
+ * lengthening the file, and depth flatters the lazy side specifically, because
+ * consumers that wrap features tend to copy each subfeature's attributes on the
+ * way. It reported 3.03x end-to-end where a corpus of distinct genes says
+ * 1.29x, and 8.5x on retained heap where the honest figure is 2.3x.
  *
- *   tair10_chr1   1.8 attrs/line   1.36x
- *   gencode-like 16.6 attrs/line   2.66x
+ * Measured against a generated corpus of distinct genes (jb2bench
+ * `ecosystem/results/gff3-lazy.md`, one process per arm, which is what this
+ * vitest file cannot do):
  *
- * Parse time alone is not the whole story either. End to end in the consumer
- * this was built for — parse, wrap each feature, then perform every read a
- * JBrowse canvas layout pass performs — the lazy path is further ahead, because
- * the eager side pays to build attribute objects that the wrapping then copies
- * and the reads never touch:
+ *   parse only          ~1.2 attrs/line  1.2-1.5x   ~10 attrs/line  1.9-2.2x
+ *   parse + the reads a render performs  1.0-1.2x                   1.0-1.2x
  *
- *   tair10_chr1   1.8 attrs/line   1.55x
- *   gencode-like 16.6 attrs/line   3.03x
+ * The second row is the one to keep in mind: at the point of use the lazy side
+ * gives most of the parse win back, because every getAttribute is a scan and a
+ * render does several per feature. Deferring work only pays if the consumer
+ * does not then pay for it on the way out.
  *
- * (Measured before the tab-scanning change those were 1.04x and 2.36x, so if
- * you are re-running this, build esm/ first — an end-to-end harness importing a
- * stale build silently measures the previous commit.)
+ * A consumer that also stops materializing attributes elsewhere does better —
+ * JBrowse measures 1.29x/1.36x end to end, but that comes from its Feature
+ * wrapper no longer spreading every subfeature, not from this library.
  *
  * Retained heap after parsing, which for a caller holding a whole file resident
- * is the more durable effect:
- *
- *   tair10_chr1                    eager 60.7MB  lazy 42.0MB  1.4x smaller
- *   gencode-like                   eager 58.4MB  lazy  6.9MB  8.5x smaller
- *
- * So the trade is: nothing to gain when column 9 is nearly empty, materially
- * faster and much smaller when it is not. Annotation-grade GFF3 (GENCODE,
- * NCBI, Ensembl) is the latter; a bare feature dump is the former.
+ * is the more durable effect: on ~10 attrs/line, 16.1MB against 7.0MB (2.3x);
+ * on ~1.2, 8.0MB against 7.1MB.
  */
 
 function featureLines(path: string) {
