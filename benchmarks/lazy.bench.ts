@@ -20,13 +20,18 @@ import { getAttribute, parseLines, parseLinesLazy } from '../src/index.ts'
  *   tair10_chr1   1.8 attrs/line   1.36x
  *   gencode-like 16.6 attrs/line   2.66x
  *
- * But parse time is not the whole story, and measuring it alone overstates the
- * case. End to end in the consumer this was built for — parse, wrap each
- * feature, then perform every read a JBrowse canvas layout pass performs — the
- * sparse file's parse win washes out against the wrapping and the reads:
+ * Parse time alone is not the whole story either. End to end in the consumer
+ * this was built for — parse, wrap each feature, then perform every read a
+ * JBrowse canvas layout pass performs — the lazy path is further ahead, because
+ * the eager side pays to build attribute objects that the wrapping then copies
+ * and the reads never touch:
  *
- *   tair10_chr1   1.8 attrs/line   1.04x, no meaningful change
- *   gencode-like 16.6 attrs/line   2.36x
+ *   tair10_chr1   1.8 attrs/line   1.55x
+ *   gencode-like 16.6 attrs/line   3.03x
+ *
+ * (Measured before the tab-scanning change those were 1.04x and 2.36x, so if
+ * you are re-running this, build esm/ first — an end-to-end harness importing a
+ * stale build silently measures the previous commit.)
  *
  * Retained heap after parsing, which for a caller holding a whole file resident
  * is the more durable effect:
