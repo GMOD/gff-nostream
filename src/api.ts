@@ -1,6 +1,6 @@
-import { parseFeature } from './util.ts'
+import { getLinkAttributes, parseFeature, parseFeatureLazy } from './util.ts'
 
-import type { GffFeature } from './util.ts'
+import type { GffFeature, LazyGffFeature } from './util.ts'
 
 export interface LineRecord {
   /** Raw GFF3 feature line */
@@ -14,6 +14,12 @@ export interface LineRecord {
  */
 export interface ParsedRecord<R extends LineRecord = LineRecord> {
   feature: GffFeature
+  record: R
+}
+
+/** {@link ParsedRecord} whose feature still carries column 9 as raw text. */
+export interface ParsedLazyRecord<R extends LineRecord = LineRecord> {
+  feature: LazyGffFeature
   record: R
 }
 
@@ -77,9 +83,47 @@ function linkFeature(
   byId: Map<string, GffFeature>,
   orphans: Map<string, GffFeature[]>,
 ): LinkStatus {
-  const id = firstString(feature.id)
-  const parents = toStringArray(feature.parent)
+  return linkResolved(
+    feature,
+    firstString(feature.id),
+    toStringArray(feature.parent),
+    byId,
+    orphans,
+  )
+}
 
+/**
+ * {@link linkFeature} for a feature whose attributes are still raw text: the
+ * tree-building logic is identical, only the two attributes it needs are read
+ * with a targeted scan rather than off already-parsed properties.
+ */
+function linkFeatureLazy(
+  feature: LazyGffFeature,
+  byId: Map<string, LazyGffFeature>,
+  orphans: Map<string, LazyGffFeature[]>,
+): LinkStatus {
+  const { id, parent } = getLinkAttributes(feature)
+  return linkResolved(
+    feature,
+    firstString(id),
+    toStringArray(parent),
+    byId,
+    orphans,
+  )
+}
+
+/**
+ * The link-and-attach step itself, over an id and parent list the caller has
+ * already extracted — the one copy shared by the eager and lazy parsers, which
+ * differ only in where those two values come from.
+ */
+function linkResolved<F extends { subfeatures: F[] }>(
+  feature: F,
+  id: string | undefined,
+  parents: string[],
+  byId: Map<string, F>,
+  orphans: Map<string, F[]>,
+): LinkStatus {
   // Register the id only the first time it is seen. Continuation lines
   // (multi-location features such as a CDS spanning several segments share one
   // ID across lines) skip registration but must still be attached to their
@@ -121,12 +165,27 @@ function isUnparented(feature: GffFeature, byId: Map<string, GffFeature>) {
   return !toStringArray(feature.parent).some(parentId => byId.has(parentId))
 }
 
+/**
+ * {@link isUnparented} for a lazily-parsed feature. Rescanning the attribute
+ * string is fine here: this runs only over the features still orphaned after
+ * the whole input has been read, not over every line.
+ */
+function isUnparentedLazy(
+  feature: LazyGffFeature,
+  byId: Map<string, LazyGffFeature>,
+) {
+  return !toStringArray(getLinkAttributes(feature).parent).some(parentId =>
+    byId.has(parentId),
+  )
+}
+
 /*
- * The three entry points below run the same link-and-collect loop over
+ * The five entry points below run the same link-and-collect loop over
  * differently-shaped input. Routing them through one core that reads lines via
  * a callback was tried and reverted — it put every caller on a shared
  * polymorphic call site for no measured gain. The duplication is deliberate;
- * keep the three loops in sync by hand.
+ * keep the loops in sync by hand. (The link step itself is *not* duplicated:
+ * that is `linkResolved`, which the eager and lazy paths share.)
  */
 
 /**
@@ -249,4 +308,81 @@ export function parseRecords<R extends LineRecord>(
   return items
 }
 
-export type { GffFeature } from './util.ts'
+/**
+ * {@link parseLines}, leaving each feature's attributes as raw column-9 text.
+ * Only ID and Parent are read, because the parent/child tree cannot be built
+ * without them; everything else is materialized on demand — see
+ * {@link LazyGffFeature} for when that is the right trade.
+ *
+ * @param lines - raw GFF3 feature lines
+ * @returns top-level features, attributes unparsed
+ */
+export function parseLinesLazy(lines: readonly string[]): LazyGffFeature[] {
+  const items: LazyGffFeature[] = []
+  const pending: LazyGffFeature[] = []
+  const byId = new Map<string, LazyGffFeature>()
+  const orphans = new Map<string, LazyGffFeature[]>()
+
+  for (const line of lines) {
+    const feature = parseFeatureLazy(line)
+    const status = linkFeatureLazy(feature, byId, orphans)
+    if (status === 'top-level') {
+      items.push(feature)
+    } else if (status === 'orphaned') {
+      pending.push(feature)
+    }
+  }
+
+  for (const feature of pending) {
+    if (isUnparentedLazy(feature, byId)) {
+      items.push(feature)
+    }
+  }
+
+  return items
+}
+
+/**
+ * {@link parseRecords}, leaving each feature's attributes as raw column-9 text.
+ * The lazy counterpart for a caller that also carries its own per-line identity
+ * (a tabix byte offset, say) — see {@link LazyGffFeature}.
+ *
+ * @param records - Array of records, each carrying a raw GFF3 `line`
+ * @returns top-level features with attributes unparsed, each paired with its
+ *   originating record
+ */
+export function parseRecordsLazy<R extends LineRecord>(
+  records: readonly R[],
+): ParsedLazyRecord<R>[] {
+  const items: ParsedLazyRecord<R>[] = []
+  const byId = new Map<string, LazyGffFeature>()
+  const orphans = new Map<string, LazyGffFeature[]>()
+  const pending: ParsedLazyRecord<R>[] = []
+
+  for (const record of records) {
+    const feature = parseFeatureLazy(record.line)
+    const status = linkFeatureLazy(feature, byId, orphans)
+    if (status === 'top-level') {
+      items.push({ feature, record })
+    } else if (status === 'orphaned') {
+      pending.push({ feature, record })
+    }
+  }
+
+  for (const parsed of pending) {
+    if (isUnparentedLazy(parsed.feature, byId)) {
+      items.push(parsed)
+    }
+  }
+
+  return items
+}
+
+export {
+  getAttribute,
+  getAttributes,
+  getLinkAttributes,
+  parseFeatureLazy,
+} from './util.ts'
+
+export type { GffFeature, LazyGffFeature } from './util.ts'

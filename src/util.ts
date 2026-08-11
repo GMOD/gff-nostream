@@ -261,6 +261,256 @@ export function parseAttributes(
  * @param line - GFF3 feature line
  * @returns The parsed feature
  */
+/**
+ * A parsed GFF3 feature whose attributes are still the raw text of column 9.
+ *
+ * The eight fixed columns are parsed exactly as {@link GffFeature}'s are; what
+ * is deferred is turning column 9 into object keys, which on annotation-grade
+ * input (GENCODE, NCBI, Ensembl — 15-20 attributes a line) is about two thirds
+ * of the cost of parsing a line. Read attributes with {@link getAttribute} for
+ * one key, or {@link getAttributes} to materialize them all.
+ *
+ * Worth deferring only when most attributes are never read. A caller that will
+ * read every attribute of every feature should use {@link parseFeature}, which
+ * parses each attribute string once instead of once per lookup.
+ */
+export interface LazyGffFeature {
+  start: number
+  end: number
+  strand?: number
+  type: string | null
+  source: string | null
+  refName: string
+  phase?: number
+  score?: number
+  subfeatures: LazyGffFeature[]
+  /**
+   * Raw, unparsed column 9. Present so attributes can be materialized later;
+   * it is a normal enumerable property, so a caller that spreads or
+   * JSON-stringifies the feature gets this string and *not* the attributes.
+   */
+  attributeString: string
+}
+
+/**
+ * The raw tags (lowercased) that {@link attributeKey} maps onto `key`, as a
+ * primary and an optional alternate — two `string | undefined` locals rather
+ * than an array, because this is resolved on every lookup and an array here
+ * costs more than the scan it feeds.
+ *
+ * Every COMMON_ATTRS entry equals its tag's `toLowerCase()`, so that table is
+ * purely a fast path and the mapping is exactly "lowercase, then suffix '2' if
+ * the result is reserved". Inverting it: a reserved key is unreachable (any tag
+ * lowercasing to it is suffixed away), and a key ending in '2' whose stem is
+ * reserved is reachable two ways — from the stem (`Start` -> `start2`) and from
+ * a tag literally named `start2`. Which of those wins is decided by position,
+ * not by preference: the scan keeps the last match either way, as the eager
+ * parser's last-wins assignment does.
+ */
+function primaryTag(key: string) {
+  return JBROWSE_DEFAULT_FIELDS.has(key) ? undefined : key
+}
+
+function alternateTag(key: string) {
+  const stem = key.endsWith('2') ? key.slice(0, -1) : undefined
+  return stem !== undefined && JBROWSE_DEFAULT_FIELDS.has(stem)
+    ? stem
+    : undefined
+}
+
+/**
+ * Case-insensitive compare of `s[start,end)` against an already-lowercased
+ * `lower`, without slicing the tag out first. ASCII is folded inline; a tag
+ * containing anything else falls back to `toLowerCase`, which is the only way
+ * to be right about non-ASCII case folding (and about the rare fold that
+ * changes length, hence the second loop).
+ */
+function tagMatches(s: string, start: number, end: number, lower: string) {
+  if (end - start === lower.length) {
+    for (let i = 0; i < lower.length; i++) {
+      const c = s.charCodeAt(start + i)
+      if (c >= 128) {
+        return s.slice(start, end).toLowerCase() === lower
+      }
+      const lc = c >= 65 && c <= 90 ? c + 32 : c
+      if (lc !== lower.charCodeAt(i)) {
+        return false
+      }
+    }
+    return true
+  }
+  for (let i = start; i < end; i++) {
+    if (s.charCodeAt(i) >= 128) {
+      return s.slice(start, end).toLowerCase() === lower
+    }
+  }
+  return false
+}
+
+/**
+ * Values for several attribute keys in one pass over the attribute string,
+ * returned positionally. Mirrors {@link parseAttributes}'s scan exactly —
+ * same delimiter handling, same "skip a tag with no value" rule, same
+ * single-value collapse — but slices and unescapes a value only for a tag that
+ * matches one of the wanted keys. Later occurrences overwrite earlier ones,
+ * matching the eager parser's last-wins assignment.
+ *
+ * One pass for N keys because the linking loop wants ID and Parent together,
+ * and scanning twice for them would undo much of the point.
+ */
+/** True when the tag at `[start,end)` is `tag`, or `alt` if one is given. */
+function tagIs(
+  s: string,
+  start: number,
+  end: number,
+  tag: string | undefined,
+  alt: string | undefined,
+) {
+  return (
+    (tag !== undefined && tagMatches(s, start, end, tag)) ||
+    (alt !== undefined && tagMatches(s, start, end, alt))
+  )
+}
+
+/**
+ * Values for up to two attribute slots in one pass. Mirrors
+ * {@link parseAttributes}'s scan exactly — same delimiter handling, same "skip
+ * a tag with no value" rule, same single-value collapse — but slices and
+ * unescapes a value only for a tag that matches a wanted slot, and keeps the
+ * last match, as the eager parser's last-wins assignment does.
+ *
+ * Two slots rather than a list because the only multi-key caller is the linking
+ * loop, which wants ID and Parent together and would otherwise scan twice. It
+ * is written to allocate nothing per attribute: an earlier version took a
+ * `string[]` of keys and tested them with `.some()`, which cost an array per
+ * call and a closure per attribute per key, and measured *slower* than parsing
+ * every attribute eagerly.
+ *
+ * Values are always unescaped rather than gated on the attribute string
+ * containing a '%'. `unescape` already returns its input untouched when the
+ * value has none, so the gate would only add a scan of the whole string to
+ * every lookup.
+ */
+function scanAttributes(
+  attrString: string,
+  tag0: string | undefined,
+  alt0: string | undefined,
+  tag1: string | undefined,
+  alt1: string | undefined,
+) {
+  let value0: unknown
+  let value1: unknown
+  if (
+    attrString.length === 0 ||
+    attrString === '.' ||
+    (tag0 === undefined && alt0 === undefined && tag1 === undefined)
+  ) {
+    return { value0, value1 }
+  }
+
+  const attrs = trimLineEnd(attrString)
+  const len = attrs.length
+
+  let start = 0
+  while (start < len) {
+    const semiIdx = indexOrEnd(attrs, ';', start, len)
+    const eqIdx = attrs.indexOf('=', start)
+    if (eqIdx !== -1 && eqIdx + 1 < semiIdx) {
+      const slot0 = tagIs(attrs, start, eqIdx, tag0, alt0)
+      if (slot0 || tagIs(attrs, start, eqIdx, tag1, alt1)) {
+        const values = parseValues(attrs, eqIdx + 1, semiIdx, true)
+        if (values.length !== 0) {
+          const value = values.length === 1 ? values[0] : values
+          if (slot0) {
+            value0 = value
+          } else {
+            value1 = value
+          }
+        }
+      }
+    }
+    start = semiIdx + 1
+  }
+  return { value0, value1 }
+}
+
+/** The value of one attribute, parsed on demand. See {@link LazyGffFeature}. */
+export function getAttribute(feature: LazyGffFeature, key: string) {
+  return scanAttributes(
+    feature.attributeString,
+    primaryTag(key),
+    alternateTag(key),
+    undefined,
+    undefined,
+  ).value0
+}
+
+/**
+ * Every attribute of a lazily-parsed feature, as the eager parser would have
+ * spread them onto it. This is the full column-9 parse the lazy path defers,
+ * so call it when a caller genuinely needs all of them — serializing a feature
+ * for a detail view, say.
+ */
+export function getAttributes(feature: LazyGffFeature) {
+  const result: Record<string, unknown> = {}
+  // The eager path derives shouldUnescape from the whole line rather than just
+  // column 9, but `unescape` returns its input untouched when there is no '%',
+  // so narrowing it to the attribute string cannot change any value.
+  parseAttributes(
+    feature.attributeString,
+    result,
+    feature.attributeString.includes('%'),
+  )
+  return result
+}
+
+/**
+ * ID and Parent together, the two attributes tree-building needs, in one pass.
+ * Neither name is reserved and neither ends in '2', so both resolve to a plain
+ * tag with no alternate.
+ */
+export function getLinkAttributes(feature: LazyGffFeature) {
+  const { value0, value1 } = scanAttributes(
+    feature.attributeString,
+    'id',
+    undefined,
+    'parent',
+    undefined,
+  )
+  return { id: value0, parent: value1 }
+}
+
+/**
+ * Parse a GFF3 feature line, leaving column 9 as raw text. The
+ * attribute-deferring counterpart to {@link parseFeature}; see
+ * {@link LazyGffFeature} for when that pays.
+ *
+ * @param line - GFF3 feature line
+ * @returns The parsed feature, attributes unparsed
+ */
+export function parseFeatureLazy(line: string): LazyGffFeature {
+  const f = line.split('\t')
+  const shouldUnescape = line.includes('%')
+  const startStr = f[3]
+  const endStr = f[4]
+  const scoreStr = f[5]
+  const strandStr = f[6]
+  const phase = f[7]
+
+  return {
+    refName: strField(f[0], shouldUnescape, ''),
+    source: strField(f[1], shouldUnescape, null),
+    type: strField(f[2], shouldUnescape, null),
+    start: isEmpty(startStr) ? 0 : +startStr - 1,
+    end: isEmpty(endStr) ? 0 : +endStr,
+    score: isEmpty(scoreStr) ? undefined : +scoreStr,
+    strand: strandStr === undefined ? undefined : STRAND_MAP[strandStr],
+    phase: isEmpty(phase) ? undefined : +phase,
+    subfeatures: [],
+    attributeString: f[8] ?? '',
+  }
+}
+
 export function parseFeature(line: string): GffFeature {
   const f = line.split('\t')
   const shouldUnescape = line.includes('%')
