@@ -481,14 +481,92 @@ export function getLinkAttributes(feature: LazyGffFeature) {
 }
 
 /**
+ * Offsets of the first eight tabs on the line just scanned by
+ * {@link scanTabs}.
+ *
+ * Module-level and reused rather than returned, because allocating an array
+ * per line is most of what scanning instead of splitting is trying to avoid.
+ * Safe because it is filled and read within a single synchronous call, with
+ * nothing reentrant in between: the readers below call only `strField` and
+ * `unescape`, neither of which scans a line.
+ */
+const tabPositions = new Int32Array(8)
+
+/**
+ * Record the offsets of the first eight tabs of `line` in
+ * {@link tabPositions}. False when there are fewer than eight, i.e. the line
+ * has fewer than the nine columns GFF3 requires, in which case the caller
+ * falls back to splitting — that path has to reason about absent columns, and
+ * it is not worth having two pieces of code doing so.
+ */
+function scanTabs(line: string) {
+  let p = 0
+  for (let i = 0; i < 8; i++) {
+    const t = line.indexOf('\t', p)
+    if (t === -1) {
+      return false
+    }
+    tabPositions[i] = t
+    p = t + 1
+  }
+  return true
+}
+
+/** True when the column spanning `[from,to)` is empty or a lone '.'. */
+function isDotOrEmpty(line: string, from: number, to: number) {
+  return to === from || (to - from === 1 && line.charCodeAt(from) === 46)
+}
+
+/**
  * Parse a GFF3 feature line, leaving column 9 as raw text. The
  * attribute-deferring counterpart to {@link parseFeature}; see
  * {@link LazyGffFeature} for when that pays.
+ *
+ * Columns are read by scanning for tabs rather than `split('\t')`, which
+ * allocates a nine-element array plus eight substrings per line when six of
+ * them are immediately turned into numbers or discarded. Worth 1.8-2.4x on
+ * this function. Scanning is also as fast as being *handed* the column offsets
+ * by the indexed-file reader that already computed some of them, which is why
+ * this parser does not take them as an argument.
  *
  * @param line - GFF3 feature line
  * @returns The parsed feature, attributes unparsed
  */
 export function parseFeatureLazy(line: string): LazyGffFeature {
+  if (!scanTabs(line)) {
+    return parseFeatureLazySplit(line)
+  }
+  const shouldUnescape = line.includes('%')
+  const t0 = tabPositions[0]!
+  const t1 = tabPositions[1]!
+  const t2 = tabPositions[2]!
+  const t3 = tabPositions[3]!
+  const t4 = tabPositions[4]!
+  const t5 = tabPositions[5]!
+  const t6 = tabPositions[6]!
+  const t7 = tabPositions[7]!
+
+  // a tab inside column 9 is invalid GFF3, but `split` would have cut the
+  // attributes at it, so bound the slice the same way rather than silently
+  // parsing more than the eager path does
+  const attrEnd = line.indexOf('\t', t7 + 1)
+
+  return {
+    refName: strField(line.slice(0, t0), shouldUnescape, ''),
+    source: strField(line.slice(t0 + 1, t1), shouldUnescape, null),
+    type: strField(line.slice(t1 + 1, t2), shouldUnescape, null),
+    start: isDotOrEmpty(line, t2 + 1, t3) ? 0 : +line.slice(t2 + 1, t3) - 1,
+    end: isDotOrEmpty(line, t3 + 1, t4) ? 0 : +line.slice(t3 + 1, t4),
+    score: isDotOrEmpty(line, t4 + 1, t5) ? undefined : +line.slice(t4 + 1, t5),
+    strand: STRAND_MAP[line.slice(t5 + 1, t6)],
+    phase: isDotOrEmpty(line, t6 + 1, t7) ? undefined : +line.slice(t6 + 1, t7),
+    subfeatures: [],
+    attributeString: line.slice(t7 + 1, attrEnd === -1 ? undefined : attrEnd),
+  }
+}
+
+/** {@link parseFeatureLazy} for a line with fewer than nine columns. */
+function parseFeatureLazySplit(line: string): LazyGffFeature {
   const f = line.split('\t')
   const shouldUnescape = line.includes('%')
   const startStr = f[3]
@@ -511,6 +589,16 @@ export function parseFeatureLazy(line: string): LazyGffFeature {
   }
 }
 
+/*
+ * Deliberately still `split('\t')`, unlike parseFeatureLazy above.
+ *
+ * Scanning for tabs was tried here too and measured 1.18x on a sparse file but
+ * 0.94x on an attribute-heavy one, so it is not a win. The reason is the extra
+ * indexOf that bounds column 9 at a stray tab: on a GENCODE line that scans
+ * ~300 characters, and this function — which goes on to parse every attribute —
+ * has nothing cheap enough left for the saved allocations to pay it back. The
+ * lazy parser does, which is why it is worth it there and not here.
+ */
 export function parseFeature(line: string): GffFeature {
   const f = line.split('\t')
   const shouldUnescape = line.includes('%')

@@ -86,6 +86,54 @@ describe('parseRecordsLazy', () => {
   })
 })
 
+// Columns are read by scanning for tabs, with a split-based fallback for a
+// line that has fewer than the nine columns GFF3 requires. The 17-file
+// differential above only ever exercises the scanning path, since real files
+// are well formed.
+describe('column parsing against the eager parser', () => {
+  const agrees = (line: string) => {
+    const [lazy] = parseLinesLazy([line])
+    const [eager] = parseLines([line])
+    const { attributeString, subfeatures, ...columns } = lazy!
+    const { subfeatures: _s, ...eagerAll } = eager!
+    // every fixed column the eager parser produced must match
+    for (const [k, v] of Object.entries(columns)) {
+      expect([k, v]).toEqual([k, eagerAll[k]])
+    }
+    return lazy!
+  }
+
+  it.each([
+    ['well formed', 'c\tsrc\tgene\t1\t100\t.\t+\t.\tID=g1'],
+    ['all columns "."', 'c\t.\t.\t.\t.\t.\t.\t.\t.'],
+    ['negative strand and phase', 'c\tsrc\tCDS\t5\t50\t3.5\t-\t2\tID=x'],
+    ['empty columns', 'c\t\t\t1\t100\t\t\t\tID=g1'],
+    ['escaped columns', 'c%20x\tsrc%20y\tgene\t1\t100\t.\t+\t.\tID=g1'],
+    ['unknown strand character', 'c\tsrc\tgene\t1\t100\t.\t?\t.\tID=g1'],
+  ])('matches on a %s line', (_name, line) => {
+    agrees(line)
+  })
+
+  // fewer than eight tabs takes the fallback; the eager parser reaches the
+  // same absent-column handling through split, so the two must still agree
+  it.each([
+    ['one column', 'ctgA'],
+    ['three columns', 'ctgA\tsrc\tgene'],
+    ['eight columns', 'c\tsrc\tgene\t1\t100\t.\t+\t.'],
+  ])('matches on a truncated line: %s', (_name, line) => {
+    const lazy = agrees(line)
+    expect(lazy.attributeString).toBe('')
+  })
+
+  // a tab inside column 9 is invalid, but `split` cuts the attributes at it and
+  // the lazy path must cut them in the same place rather than keeping more
+  it('bounds the attribute string exactly where split would', () => {
+    const line = 'c\tsrc\tgene\t1\t100\t.\t+\t.\tID=g1\tstray'
+    expect(parseLinesLazy([line])[0]!.attributeString).toBe(line.split('\t')[8])
+    agrees(line)
+  })
+})
+
 describe('getAttribute', () => {
   const one = (attrs: string) =>
     parseLinesLazy([`c\ts\tt\t1\t2\t.\t+\t.\t${attrs}`])[0]!

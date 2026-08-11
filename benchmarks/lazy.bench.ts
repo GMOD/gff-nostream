@@ -13,19 +13,30 @@ import { getAttribute, parseLines, parseLinesLazy } from '../src/index.ts'
  * and taking per-run medians put the real figure at 2.7x. Treat a difference
  * under ~1.5x here as noise, and interleave before believing anything.
  *
- * Fairly measured (medians of 25 interleaved runs, node 24):
+ * Absolute times drift by 2x between runs on the same machine, so only the
+ * within-run ratio means anything. Fairly measured (medians of 25 interleaved
+ * runs, node 24):
  *
- *   tair10_chr1   1.8 attrs/line   eager 446ms  lazy 469ms  0.95x (break-even)
- *   gencode-like 16.6 attrs/line   eager 529ms  lazy 195ms  2.71x
+ *   tair10_chr1   1.8 attrs/line   1.36x
+ *   gencode-like 16.6 attrs/line   2.66x
+ *
+ * But parse time is not the whole story, and measuring it alone overstates the
+ * case. End to end in the consumer this was built for — parse, wrap each
+ * feature, then perform every read a JBrowse canvas layout pass performs — the
+ * sparse file's parse win washes out against the wrapping and the reads:
+ *
+ *   tair10_chr1   1.8 attrs/line   1.04x, no meaningful change
+ *   gencode-like 16.6 attrs/line   2.36x
  *
  * Retained heap after parsing, which for a caller holding a whole file resident
- * is the bigger effect:
+ * is the more durable effect:
  *
  *   tair10_chr1                    eager 60.7MB  lazy 42.0MB  1.4x smaller
  *   gencode-like                   eager 58.4MB  lazy  6.9MB  8.5x smaller
  *
- * So the trade is: no faster when column 9 is nearly empty, materially faster
- * and much smaller when it is not. Annotation-grade GFF3 is the latter.
+ * So the trade is: nothing to gain when column 9 is nearly empty, materially
+ * faster and much smaller when it is not. Annotation-grade GFF3 (GENCODE,
+ * NCBI, Ensembl) is the latter; a bare feature dump is the former.
  */
 
 function featureLines(path: string) {
