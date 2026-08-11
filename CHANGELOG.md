@@ -1,3 +1,15 @@
+## [5.2.0](https://github.com/GMOD/gff-nostream/compare/v5.1.3...v5.2.0) (2026-08-11)
+
+### Chores
+
+- Render only the commit subject, and link the commit ([1a790ca](https://github.com/GMOD/gff-nostream/commit/1a790ca7ed1a75febc894e3ea42b67b92f1f4527))
+- Create a GitHub release for each published tag ([0550173](https://github.com/GMOD/gff-nostream/commit/05501738cfd7e163b84566b0d080f870786dcf31))
+- Enforce type strippability in tsconfig ([dc1c5f3](https://github.com/GMOD/gff-nostream/commit/dc1c5f31941f3003c9afea6c7bd21cddc9fec809))
+
+### Features
+
+- Parse GFF3 attributes on demand ([7459c2a](https://github.com/GMOD/gff-nostream/commit/7459c2ad178ee64afaf86feb6bbaa1d371cd9579))
+
 ## [5.1.3](https://github.com/GMOD/gff-nostream/compare/v5.1.2...v5.1.3) (2026-08-10)
 
 ### Chores
