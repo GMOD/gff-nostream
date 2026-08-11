@@ -1,6 +1,6 @@
 {
   "name": "gff-nostream",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "packageManager": "pnpm@11.15.1",
   "description": "utilities to read GFF3 data",
   "license": "MIT",

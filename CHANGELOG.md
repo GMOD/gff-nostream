@@ -1,3 +1,9 @@
+## [5.2.1](https://github.com/GMOD/gff-nostream/compare/v5.2.0...v5.2.1) (2026-08-11)
+
+### Performance Improvements
+
+- Read the lazy parser's columns by scanning for tabs ([4d65c65](https://github.com/GMOD/gff-nostream/commit/4d65c655902f93ec62f0ef0c1cf1061f5af0d33a))
+
 ## [5.2.0](https://github.com/GMOD/gff-nostream/compare/v5.1.3...v5.2.0) (2026-08-11)
 
 ### Chores
