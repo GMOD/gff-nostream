@@ -1,3 +1,23 @@
+## [5.3.0](https://github.com/GMOD/gff-nostream/compare/v5.2.1...v5.3.0) (2026-08-15)
+
+### Chores
+
+- Keep agent worktrees out of the toolchain's way ([26308d6](https://github.com/GMOD/gff-nostream/commit/26308d62c1d04a3112f3ee660c0ee32b5692085c))
+- Build each ref in a worktree, with pnpm ([5120c5e](https://github.com/GMOD/gff-nostream/commit/5120c5ed0aded7243c09b217b9f84b46895b51e1))
+- Install each ref with --frozen-lockfile ([130b1de](https://github.com/GMOD/gff-nostream/commit/130b1de69f5b16244032527459fef6a4854d639a))
+- Typecheck benchmarks/ and prof.ts ([ad7904d](https://github.com/GMOD/gff-nostream/commit/ad7904d5a04e4979cb63368d3b37471c169481f9))
+
+### Documentation
+
+- Correct the end-to-end figures for the tab-scanning change ([bb6140c](https://github.com/GMOD/gff-nostream/commit/bb6140c87b2196ab78d30d3ce3c2c4b6d33c754d))
+- The lazy figures were measured on a bad fixture ([69bc89c](https://github.com/GMOD/gff-nostream/commit/69bc89c58140d73da80b467f52d729f52884b70e))
+- Document the whole API, move the lazy trade-off to docs/ ([e567c5f](https://github.com/GMOD/gff-nostream/commit/e567c5f3303906ee1b2bdd9fca157585a4eecffd))
+- Reattach two doc comments to the functions they describe ([90f9735](https://github.com/GMOD/gff-nostream/commit/90f9735640eefaa740fcc21a308f4511ffb8ab76))
+
+### Features
+
+- Give the lazy attribute readers a usable return type ([14579e9](https://github.com/GMOD/gff-nostream/commit/14579e9c1faf8e4dbf327fe35f21be476c69ad64))
+
 ## [5.2.1](https://github.com/GMOD/gff-nostream/compare/v5.2.0...v5.2.1) (2026-08-11)
 
 ### Performance Improvements
