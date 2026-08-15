@@ -380,8 +380,8 @@ function scanAttributes(
   tag1: string | undefined,
   alt1: string | undefined,
 ) {
-  let value0: unknown
-  let value1: unknown
+  let value0: string | string[] | undefined
+  let value1: string | string[] | undefined
   if (
     attrString.length === 0 ||
     attrString === '.' ||
