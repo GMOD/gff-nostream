@@ -255,13 +255,6 @@ export function parseAttributes(
 }
 
 /**
- * Parse a GFF3 feature line. Unescaping is skipped entirely for lines with no
- * '%' character, which is the common case.
- *
- * @param line - GFF3 feature line
- * @returns The parsed feature
- */
-/**
  * A parsed GFF3 feature whose attributes are still the raw text of column 9.
  *
  * The eight fixed columns are parsed exactly as {@link GffFeature}'s are; what
@@ -347,17 +340,6 @@ function tagMatches(s: string, start: number, end: number, lower: string) {
   return false
 }
 
-/**
- * Values for several attribute keys in one pass over the attribute string,
- * returned positionally. Mirrors {@link parseAttributes}'s scan exactly —
- * same delimiter handling, same "skip a tag with no value" rule, same
- * single-value collapse — but slices and unescapes a value only for a tag that
- * matches one of the wanted keys. Later occurrences overwrite earlier ones,
- * matching the eager parser's last-wins assignment.
- *
- * One pass for N keys because the linking loop wants ID and Parent together,
- * and scanning twice for them would undo much of the point.
- */
 /** True when the tag at `[start,end)` is `tag`, or `alt` if one is given. */
 function tagIs(
   s: string,
@@ -403,7 +385,7 @@ function scanAttributes(
   if (
     attrString.length === 0 ||
     attrString === '.' ||
-    (tag0 === undefined && alt0 === undefined && tag1 === undefined)
+    (tag0 ?? alt0 ?? tag1 ?? alt1) === undefined
   ) {
     return { value0, value1 }
   }
@@ -598,6 +580,13 @@ function parseFeatureLazySplit(line: string): LazyGffFeature {
  * ~300 characters, and this function — which goes on to parse every attribute —
  * has nothing cheap enough left for the saved allocations to pay it back. The
  * lazy parser does, which is why it is worth it there and not here.
+ */
+/**
+ * Parse a GFF3 feature line. Unescaping is skipped entirely for lines with no
+ * '%' character, which is the common case.
+ *
+ * @param line - GFF3 feature line
+ * @returns The parsed feature
  */
 export function parseFeature(line: string): GffFeature {
   const f = line.split('\t')
