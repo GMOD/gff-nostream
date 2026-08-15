@@ -26,10 +26,10 @@ as one from `fetch(…).then(r => r.text())`.
 
 ## Object format
 
-Features are returned as flat objects with coordinates converted to 0-based
-half-open, `strand` as a number (`1`/`-1`/`0`), attributes spread as lowercase
-top-level keys, single-valued attributes unwrapped from their array, and child
-features nested under `subfeatures`.
+The parser hands back flat objects: coordinates converted to 0-based half-open,
+`strand` as a number (`1`/`-1`/`0`), attributes spread as lowercase top-level
+keys, single-valued attributes unwrapped from their array, and child features
+nested under `subfeatures`.
 
 A gene with an mRNA child:
 
@@ -62,30 +62,30 @@ A gene with an mRNA child:
 
 The fixed fields are `refName`, `source`, `type`, `start`, `end`, `score`,
 `strand`, `phase`, and `subfeatures`. An attribute whose lowercased name would
-land on one of them is suffixed with `2` — `Start=` becomes `start2`. `seq_id`
-and `refname` are reserved the same way, so a `Seq_id=` attribute cannot sit
-beside `refName`.
+land on one of them picks up a `2` — `Start=` becomes `start2`. The parser
+reserves `seq_id` and `refname` the same way, so a `Seq_id=` attribute cannot
+sit beside `refName`.
 
 ## Parsing behavior
 
 These apply to every parse function below.
 
-Comments, directives, and `##FASTA` sections are ignored.
+The parser ignores comments, directives, and `##FASTA` sections.
 
-Multi-location features — the same ID on several lines, such as a CDS spanning
-several segments — are not merged. Each line is its own flat feature, attached
-to its parent (or kept as a top-level item) independently.
+It does not merge multi-location features — the same ID on several lines, such
+as a CDS spanning several segments. Each line becomes its own flat feature,
+attaching to its parent, or standing as a top-level item, independently.
 
-A feature whose `Parent` is never defined in the input is returned as a
-top-level feature, after the features that appeared in the input, rather than
-being dropped. This is common when parsing a slice of a file, e.g. a tabix
-region query that cuts off the parent line.
+A feature whose `Parent` never appears in the input comes back as a top-level
+feature, after the ones that did, rather than dropping. This happens routinely
+when parsing a slice of a file, e.g. a tabix region query that cuts off the
+parent line.
 
 ## Lazy parsing
 
 Every parse function has a `…Lazy` counterpart that leaves column 9 as raw text
-on `feature.attributeString` instead of spreading it into keys. Only `ID` and
-`Parent` are read, since the tree cannot be built without them.
+on `feature.attributeString` instead of spreading it into keys. It reads only
+`ID` and `Parent`, since it cannot build the tree without them.
 
 ```js
 import { getAttribute, parseLinesLazy } from 'gff-nostream'
@@ -116,11 +116,11 @@ and any `##FASTA` section.
 
 #### `parseRecords<R extends LineRecord>(records: readonly R[]): ParsedRecord<R>[]`
 
-Parse an array of records wrapping raw GFF3 lines. Each top-level feature is
-returned paired with the record it came from, so a caller can attach its own
-stable id (a byte offset, a hash, …) without the parser stamping anything onto
-the feature. Records may carry extra fields (`R` is inferred), which pass
-through untouched on `record`.
+Parse an array of records wrapping raw GFF3 lines. Each top-level feature comes
+back paired with the record it came from, so a caller can attach its own stable
+id (a byte offset, a hash, …) without the parser stamping anything onto the
+feature. Records may carry extra fields (`R` is inferred), which pass through
+untouched on `record`.
 
 ```ts
 const records = lines.map((line, i) => ({ line, offset: offsets[i] }))
@@ -154,8 +154,8 @@ Every attribute, as the eager parser would have spread them onto the feature.
 
 #### `getLinkAttributes(feature: LazyGffFeature): { id: unknown; parent: unknown }`
 
-`ID` and `Parent` in one pass. This is what the lazy parsers use to build the
-tree; it is exported for callers doing their own linking.
+`ID` and `Parent` in one pass. The lazy parsers build the tree with it, and the
+package exports it for callers doing their own linking.
 
 ### Other
 
@@ -173,12 +173,12 @@ interface LineRecord {
 
 interface ParsedRecord<R extends LineRecord = LineRecord> {
   feature: GffFeature
-  record: R // the input record this top-level feature was parsed from
+  record: R // the input record this top-level feature came from
 }
 ```
 
-`ParsedLazyRecord` is `ParsedRecord` with a `LazyGffFeature`. `GffFeature` and
-`LazyGffFeature` are also exported.
+`ParsedLazyRecord` is `ParsedRecord` with a `LazyGffFeature`. The package also
+exports `GffFeature` and `LazyGffFeature`.
 
 ## Contributing
 

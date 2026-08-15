@@ -2,8 +2,8 @@
 
 `parseLinesLazy`, `parseRecordsLazy`, and `parseFeatureLazy` parse the eight
 fixed columns exactly as the eager functions do, but leave column 9 as raw text
-on `feature.attributeString`. Only `ID` and `Parent` are read, because the
-parent/child tree cannot be built without them.
+on `feature.attributeString`. They read only `ID` and `Parent`, because nothing
+can build the parent/child tree without those two.
 
 ## When it pays
 
@@ -25,7 +25,7 @@ pay for it on the way out. A caller that reads every attribute of every feature
 should use the eager functions, which parse each attribute string once rather
 than once per lookup.
 
-Retained heap is the more durable effect for a caller holding a whole file
+Retained heap is the more durable effect for a caller that holds a whole file
 resident: on ~10 attrs/line, 16.1MB eager against 7.0MB lazy (2.3x); on ~1.2
 attrs/line, 8.0MB against 7.1MB.
 
@@ -38,7 +38,7 @@ attrs/line, 8.0MB against 7.1MB.
 `getAttribute` takes the _parsed_ key, not the raw GFF3 tag: lowercased, and
 suffixed with `2` if it collides with a fixed field. `getAttribute(f, 'name')`
 finds `Name=`; a reserved key such as `getAttribute(f, 'start')` always returns
-`undefined`, since no attribute can be stored there.
+`undefined`, since no attribute ever lands there.
 
 ## Benchmarking
 
