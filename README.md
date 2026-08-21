@@ -22,10 +22,12 @@ const features = parseStringSync(readFileSync('my_annotations.gff3', 'utf8'))
 ```
 
 There is no filesystem dependency — in the browser, pass any GFF3 string, such
-as one from `fetch(…).then(r => r.text())`. For a remote `.gff3.gz`, query it
-with [@gmod/tabix](https://github.com/GMOD/tabix-js) over a
+as one from `fetch(…).then(r => r.text())`. If your GFF3 is a remote `.gff3.gz`,
+query it with [@gmod/tabix](https://github.com/GMOD/tabix-js), reading through a
+filehandle from
 [`@gmod/range-cache-filehandle`](https://github.com/GMOD/range-cache-filehandle)
-filehandle and parse the lines it hands back.
+so that its byte ranges are cached, and parse the lines it hands back with the
+functions here.
 
 ## Object format
 
