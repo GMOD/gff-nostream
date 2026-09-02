@@ -1,3 +1,16 @@
+## [5.4.0](https://github.com/GMOD/gff-nostream/compare/v5.3.0...v5.4.0) (2026-09-02)
+
+### Documentation
+
+- Put the prose in the active voice ([691ad74](https://github.com/GMOD/gff-nostream/commit/691ad74285afd44897e74a068a07e654d0a534ff))
+- Correct the release command in CONTRIBUTING, and its voice ([4c692d1](https://github.com/GMOD/gff-nostream/commit/4c692d14d94944739e994d9aff416560815857ab))
+- Point remote readers at @gmod/range-cache-filehandle ([0a3b482](https://github.com/GMOD/gff-nostream/commit/0a3b4828385563f6b1b575967bfa54851b834aa7))
+- Say it in full sentences ([61e1462](https://github.com/GMOD/gff-nostream/commit/61e1462a0919a9150276c1e1a2192944b3992a5f))
+
+### Features
+
+- HasIdAttribute, and tags are matched with surrounding spaces trimmed ([06e87ae](https://github.com/GMOD/gff-nostream/commit/06e87aecc6e16051fcbbbc733d9250544fa1c08f))
+
 ## [5.3.0](https://github.com/GMOD/gff-nostream/compare/v5.2.1...v5.3.0) (2026-08-15)
 
 ### Chores
