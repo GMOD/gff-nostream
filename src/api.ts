@@ -1,4 +1,9 @@
-import { getLinkAttributes, parseFeature, parseFeatureLazy } from './util.ts'
+import {
+  attributeStringHasId,
+  getLinkAttributes,
+  parseFeature,
+  parseFeatureLazy,
+} from './util.ts'
 
 import type { GffFeature, LazyGffFeature } from './util.ts'
 
@@ -37,6 +42,32 @@ export function extractType(line: string): string {
     const t3 = line.indexOf('\t', t2 + 1)
     return line.slice(t2 + 1, t3 === -1 ? line.length : t3)
   }
+}
+
+/**
+ * Whether a raw GFF3 line carries an `ID` attribute, which is the exact test for
+ * whether it can have children: a child names its parent with `Parent=<ID>`, so
+ * a record with no `ID` can be referenced by nothing. Decided by the same scan
+ * the parser links with, so a line this admits is one whose children the tree
+ * will actually attach, and one it rejects is one they never would be.
+ *
+ * Column 9 is found by counting tabs rather than from the last tab, and is
+ * bounded at a stray tab inside it, exactly as {@link parseFeatureLazy} bounds
+ * it. A line with fewer than nine columns has no attributes to carry an ID.
+ */
+export function hasIdAttribute(line: string) {
+  let p = 0
+  for (let i = 0; i < 8; i++) {
+    const t = line.indexOf('\t', p)
+    if (t === -1) {
+      return false
+    }
+    p = t + 1
+  }
+  const attrEnd = line.indexOf('\t', p)
+  return attributeStringHasId(
+    line.slice(p, attrEnd === -1 ? undefined : attrEnd),
+  )
 }
 
 /** Append a value to the array stored under key, creating the array if absent. */

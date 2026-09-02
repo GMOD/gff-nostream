@@ -77,6 +77,9 @@ These apply to every parse function below.
 
 The parser ignores comments, directives, and `##FASTA` sections.
 
+Attribute tags are matched with surrounding spaces trimmed, so `Name=A; ID=x`
+carries an `ID`, as it does under @gmod/gff.
+
 It does not merge multi-location features — the same ID on several lines, such
 as a CDS spanning several segments. Each line becomes its own flat feature,
 attaching to its parent, or standing as a top-level item, independently.
@@ -168,6 +171,14 @@ package exports it for callers doing their own linking.
 
 Extract the feature type (GFF3 column 3) from a raw line without fully splitting
 it. Returns `''` for a line with fewer than two tabs.
+
+#### `hasIdAttribute(line: string): boolean`
+
+Whether a raw line carries an `ID` the parser would link children to. A record
+with no `ID` can be named by no `Parent=`, so this is the exact test for whether
+a line can have children, and it uses the parser's own tag scan, so it agrees
+with the linker about spacing and case. A region reader that widens its fetch to
+complete a record's subfeature list can bound the widening with it.
 
 ### Types
 

@@ -3,6 +3,7 @@ export {
   getAttribute,
   getAttributes,
   getLinkAttributes,
+  hasIdAttribute,
   parseFeatureLazy,
   parseLines,
   parseLinesLazy,

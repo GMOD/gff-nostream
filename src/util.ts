@@ -184,6 +184,30 @@ function trimLineEnd(s: string) {
   return end === s.length ? s : s.slice(0, end)
 }
 
+const SPACE = ' '.charCodeAt(0)
+
+/**
+ * The spec puts a tag flush against its separator, and real files put a space
+ * after the `;` (or, less often, before the `=`) anyway. @gmod/gff trims a tag
+ * before storing it, so a file that links under the one parser links under
+ * this one too.
+ */
+function skipSpaces(s: string, from: number, to: number) {
+  let i = from
+  while (i < to && s.charCodeAt(i) === SPACE) {
+    i++
+  }
+  return i
+}
+
+function trimSpaces(s: string, from: number, to: number) {
+  let i = to
+  while (i > from && s.charCodeAt(i - 1) === SPACE) {
+    i--
+  }
+  return i
+}
+
 /** Feature key an attribute tag is stored under: lowercased, and suffixed if reserved. */
 function attributeKey(tag: string) {
   const common = COMMON_ATTRS[tag]
@@ -246,7 +270,12 @@ export function parseAttributes(
     if (eqIdx !== -1 && eqIdx + 1 < semiIdx) {
       const values = parseValues(attrs, eqIdx + 1, semiIdx, shouldUnescape)
       if (values.length !== 0) {
-        const key = attributeKey(attrs.slice(start, eqIdx))
+        const key = attributeKey(
+          attrs.slice(
+            skipSpaces(attrs, start, eqIdx),
+            trimSpaces(attrs, start, eqIdx),
+          ),
+        )
         result[key] = values.length === 1 ? values[0] : values
       }
     }
@@ -398,8 +427,10 @@ function scanAttributes(
     const semiIdx = indexOrEnd(attrs, ';', start, len)
     const eqIdx = attrs.indexOf('=', start)
     if (eqIdx !== -1 && eqIdx + 1 < semiIdx) {
-      const slot0 = tagIs(attrs, start, eqIdx, tag0, alt0)
-      if (slot0 || tagIs(attrs, start, eqIdx, tag1, alt1)) {
+      const tagStart = skipSpaces(attrs, start, eqIdx)
+      const tagEnd = trimSpaces(attrs, tagStart, eqIdx)
+      const slot0 = tagIs(attrs, tagStart, tagEnd, tag0, alt0)
+      if (slot0 || tagIs(attrs, tagStart, tagEnd, tag1, alt1)) {
         const values = parseValues(attrs, eqIdx + 1, semiIdx, true)
         if (values.length !== 0) {
           const value = values.length === 1 ? values[0] : values
@@ -444,6 +475,17 @@ export function getAttributes(feature: LazyGffFeature) {
     feature.attributeString.includes('%'),
   )
   return result
+}
+
+/**
+ * Whether column 9 carries an `ID` that {@link getLinkAttributes} would read,
+ * resolved by the same scan so the two cannot disagree.
+ */
+export function attributeStringHasId(attrString: string) {
+  return (
+    scanAttributes(attrString, 'id', undefined, undefined, undefined).value0 !==
+    undefined
+  )
 }
 
 /**

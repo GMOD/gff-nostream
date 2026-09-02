@@ -4,7 +4,11 @@ import { describe, expect, it } from 'vitest'
 
 import {
   extractType,
+  getAttribute,
+  getLinkAttributes,
+  hasIdAttribute,
   parseLines,
+  parseLinesLazy,
   parseRecords,
   parseStringSync,
 } from '../src/index.ts'
@@ -369,5 +373,55 @@ describe('unescape', () => {
     expect(unescape('a%2fb')).toBe('a/b')
     expect(unescape('a%eFb')).toBe(unescape('a%EFb'))
     expect(unescape('a%Efb')).toBe(unescape('a%EFb'))
+  })
+})
+
+describe('whitespace around an attribute tag', () => {
+  const gene = (attrs: string) => `c\ts\tgene\t1\t100\t.\t+\t.\t${attrs}`
+  const mrna = (attrs: string) => `c\ts\tmRNA\t1\t100\t.\t+\t.\t${attrs}`
+
+  it('links a child to a parent whose ID follows "; "', () => {
+    const [eager] = parseLines([gene('Name=A; ID=x'), mrna('Parent=x')])
+    expect(eager?.id).toBe('x')
+    expect(eager?.subfeatures).toHaveLength(1)
+    const [lazy] = parseLinesLazy([gene('Name=A; ID=x'), mrna(' Parent=x')])
+    expect(getLinkAttributes(lazy!).id).toBe('x')
+    expect(lazy?.subfeatures).toHaveLength(1)
+  })
+
+  it('trims space before the "=" as well', () => {
+    expect(parseLines([gene('ID =x')])[0]?.id).toBe('x')
+    expect(getAttribute(parseLinesLazy([gene('ID =x')])[0]!, 'id')).toBe('x')
+  })
+})
+
+describe('hasIdAttribute', () => {
+  const line = (attrs: string) => `chr1\tRefSeq\tgene\t1\t2\t.\t+\t.\t${attrs}`
+
+  it('is true for a record the linker would register', () => {
+    expect(hasIdAttribute(line('ID=gene-A;Name=A'))).toBe(true)
+    expect(hasIdAttribute(line('Name=A;ID=gene-A'))).toBe(true)
+    expect(hasIdAttribute(line('Name=A; ID=gene-A'))).toBe(true)
+    expect(hasIdAttribute(line('id=gene-A'))).toBe(true)
+  })
+
+  it('is false for a record nothing can reference', () => {
+    expect(
+      hasIdAttribute(
+        'chr1\tRefSeq\tmatch\t585989\t121976459\t.\t+\t.\t' +
+          'Target=chr1 585989 121976459 +;gap_count=0;pct_identity_gap=100',
+      ),
+    ).toBe(false)
+    expect(hasIdAttribute(line('Parent=gene-A'))).toBe(false)
+    expect(hasIdAttribute(line('.'))).toBe(false)
+    expect(hasIdAttribute(line('ID=;Name=A'))).toBe(false)
+    expect(hasIdAttribute('chr1\tRefSeq\tgene')).toBe(false)
+  })
+
+  it('reads the tag, not the text', () => {
+    expect(hasIdAttribute(line('geneID=7157;Name=TP53'))).toBe(false)
+    expect(hasIdAttribute(line('Note=see ID=other'))).toBe(false)
+    expect(hasIdAttribute(line('ID=a\tParent=b'))).toBe(true)
+    expect(hasIdAttribute(line('Name=a\tID=b'))).toBe(false)
   })
 })
