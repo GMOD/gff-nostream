@@ -43,8 +43,8 @@ finds `Name=`; a reserved key such as `getAttribute(f, 'start')` always returns
 ## Benchmarking
 
 `benchmarks/lazy.bench.ts` runs under `pnpm benchonly`, but read its numbers
-with care — the file's header comment explains why vitest's harness inflates
+with care — the file's header comment explains why vitest's harness favors
 whichever arm runs second, and why sizing a GFF3 fixture up by concatenating a
-real file produces a tree structure that inflates the lazy arm specifically. The
+real file produces a tree structure that favors the lazy arm specifically. The
 figures above come from separate processes over a corpus of distinct genes, not
 from that file.
