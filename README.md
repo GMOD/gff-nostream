@@ -66,10 +66,10 @@ A gene with an mRNA child:
 ```
 
 The fixed fields are `refName`, `source`, `type`, `start`, `end`, `score`,
-`strand`, `phase`, and `subfeatures`. An attribute whose lowercased name would
-land on one of them picks up a `2` — `Start=` becomes `start2`. The parser
-reserves `seq_id` and `refname` the same way, so a `Seq_id=` attribute cannot
-sit beside `refName`.
+`strand`, `phase`, and `subfeatures`. The parser appends `2` to an attribute
+whose lowercased name matches one of them — `Start=` becomes `start2`. It
+reserves `seq_id` and `refname` the same way, so a `Seq_id=` attribute becomes
+`seq_id2` and is never stored beside `refName`.
 
 ## Parsing behavior
 
