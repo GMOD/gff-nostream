@@ -80,9 +80,10 @@ The parser ignores comments, directives, and `##FASTA` sections.
 Attribute tags are matched with surrounding spaces trimmed, so `Name=A; ID=x`
 carries an `ID`, as it does under @gmod/gff.
 
-It does not merge multi-location features — the same ID on several lines, such
-as a CDS spanning several segments. Each line becomes its own flat feature,
-attaching to its parent, or standing as a top-level item, independently.
+The parser does not merge multi-location features — the same ID on several
+lines, such as a CDS spanning several segments. Each line becomes its own flat
+feature, attaching to its parent, or standing as a top-level item,
+independently.
 
 A feature whose `Parent` never appears in the input comes back as a top-level
 feature, after the ones that did, rather than dropping. This happens routinely
@@ -102,8 +103,8 @@ const features = parseLinesLazy(lines)
 const names = features.map(f => getAttribute(f, 'name'))
 ```
 
-Worth it when most attributes are never read, and not when they are — each
-`getAttribute` rescans the string. See
+Lazy parsing is worth it when most attributes are never read, and not when they
+are, because each `getAttribute` rescans the string. See
 [docs/lazy-parsing.md](docs/lazy-parsing.md) for the measured trade-off and the
 gotchas.
 
