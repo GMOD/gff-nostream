@@ -1,3 +1,23 @@
+## [5.5.0](https://github.com/GMOD/gff-nostream/compare/v5.4.0...v5.5.0) (2026-09-26)
+
+### Chores
+
+- Drop the vitest benchmarks ([060a677](https://github.com/GMOD/gff-nostream/commit/060a6772678b0eae37968894c5e48f947ed91d3f))
+
+### Documentation
+
+- Fix anti-AI writing tropes in README and docs ([ba24e1c](https://github.com/GMOD/gff-nostream/commit/ba24e1c554b3ff6ad45963d00ec8ad010bce8509))
+- Review fixes to the prose audit ([7feb583](https://github.com/GMOD/gff-nostream/commit/7feb5830fe2b4bc114033b99a639d83b042d1c00))
+- Literal verbs for data (lands, says, tells, live on) ([6e75ae6](https://github.com/GMOD/gff-nostream/commit/6e75ae67b3c2b077774d6ec11df5534c3e7a7109))
+
+### Features
+
+- A parentless discontinuous feature folds into one feature over its segments ([af33ac0](https://github.com/GMOD/gff-nostream/commit/af33ac0e75a0eb46ddb8a362a2c795415e0c53e4))
+
+### Other Changes
+
+- Update deps ([fa352bf](https://github.com/GMOD/gff-nostream/commit/fa352bf848e99609d6e23c24c0a7d3fcc8928e01))
+
 ## [5.4.0](https://github.com/GMOD/gff-nostream/compare/v5.3.0...v5.4.0) (2026-09-02)
 
 ### Documentation
