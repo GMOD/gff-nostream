@@ -75,6 +75,21 @@ describe('parseLinesLazy', () => {
 })
 
 describe('parseRecordsLazy', () => {
+  it('folds a top-level discontinuous feature as the eager parser does', () => {
+    const records = [
+      'ctgA\t.\tcDNA_match\t1050\t1500\t.\t+\t.\tID=match1',
+      'ctgA\t.\tcDNA_match\t5000\t5500\t.\t+\t.\tID=match1',
+      'ctgA\t.\tmatch\t7000\t7500\t.\t+\t.\tID=m2',
+    ].map((line, offset) => ({ line, offset }))
+    const lazy = parseRecordsLazy(records)
+    const eager = parseRecords(records)
+    expect(lazy.map(r => r.record.offset)).toEqual([0, 2])
+    expect(lazy.map(r => materialize(r.feature))).toEqual(
+      eager.map(r => r.feature),
+    )
+    expect(lazy[0]!.feature.subfeatures.map(f => f.start)).toEqual([1049, 4999])
+  })
+
   it.each(FILES)('pairs the same records as parseRecords: %s', file => {
     const records = featureLines(file).map((line, i) => ({ line, offset: i }))
     const lazy = parseRecordsLazy(records)

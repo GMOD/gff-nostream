@@ -108,17 +108,88 @@ ctgA\t.\tCDS\t400\t500\t.\t+\t0\tID=cds1;Parent=mRNA1`,
     expect(cds.map(f => f.start)).toEqual([0, 199, 399])
   })
 
-  it('keeps every segment of a top-level discontinuous feature', () => {
+  it('folds a top-level discontinuous feature into one spanning its segments', () => {
     const result = parseStringSync(
-      `ctgA\t.\tcDNA_match\t1050\t1500\t5.8e-42\t+\t.\tID=match1
-ctgA\t.\tcDNA_match\t5000\t5500\t8.1e-43\t+\t.\tID=match1
-ctgA\t.\tcDNA_match\t7000\t9000\t1.4e-40\t+\t.\tID=match1`,
+      `ctgA\t.\tcDNA_match\t1050\t1500\t5.8e-42\t+\t.\tID=match1;Target=NM_1 1 451 +
+ctgA\t.\tcDNA_match\t5000\t5500\t8.1e-43\t+\t.\tID=match1;Target=NM_1 452 952 +
+ctgA\t.\tcDNA_match\t7000\t9000\t1.4e-40\t+\t.\tID=match1;Target=NM_1 953 2953 +`,
     )
-    expect(result.length).toBe(3)
-    expect(result.map(f => [f.start, f.end])).toEqual([
-      [1049, 1500],
-      [4999, 5500],
-      [6999, 9000],
+    expect(result.length).toBe(1)
+    const [aln] = result
+    expect([aln!.start, aln!.end, aln!.type]).toEqual([
+      1049,
+      9000,
+      'cDNA_match',
+    ])
+    expect(aln!.subfeatures.map(f => [f.start, f.end, f.type])).toEqual([
+      [1049, 1500, 'cDNA_match'],
+      [4999, 5500, 'cDNA_match'],
+      [6999, 9000, 'cDNA_match'],
+    ])
+    expect(aln!.subfeatures.map(f => f.target)).toEqual([
+      'NM_1 1 451 +',
+      'NM_1 452 952 +',
+      'NM_1 953 2953 +',
+    ])
+    expect(aln!.subfeatures.every(f => f.subfeatures.length === 0)).toBe(true)
+  })
+
+  it('gives a single-line top-level feature no segment of itself', () => {
+    const result = parseStringSync(
+      `ctgA\t.\tmatch\t1050\t1500\t.\t+\t.\tID=m1
+ctgA\t.\tmatch\t5000\t5500\t.\t+\t.\tID=m2`,
+    )
+    expect(result.map(f => f.subfeatures.length)).toEqual([0, 0])
+  })
+
+  // a match carrying match_part children is already a container, so a second
+  // match line under its ID is not a segment of it
+  it('does not fold into a line that already has children', () => {
+    const result = parseStringSync(
+      `ctgA\t.\tmatch\t1000\t1500\t.\t+\t.\tID=m1
+ctgA\t.\tmatch_part\t1000\t1100\t.\t+\t.\tParent=m1
+ctgA\t.\tmatch\t5000\t5500\t.\t+\t.\tID=m1`,
+    )
+    expect(result.map(f => [f.start, f.subfeatures.map(s => s.type)])).toEqual([
+      [999, ['match_part']],
+      [4999, []],
+    ])
+  })
+
+  it('parseRecords pairs a folded feature with its first record', () => {
+    const records = [
+      'ctgA\t.\tcDNA_match\t1050\t1500\t.\t+\t.\tID=match1',
+      'ctgA\t.\tcDNA_match\t5000\t5500\t.\t+\t.\tID=match1',
+    ].map((line, offset) => ({ line, offset }))
+    const result = parseRecords(records)
+    expect(result.map(r => r.record.offset)).toEqual([0])
+    expect(result[0]!.feature.subfeatures.length).toBe(2)
+  })
+
+  // ngsutils names every gene by its symbol, so two genes share an ID; the
+  // second is not a segment of the first, and its children still attach to
+  // whichever line registered the ID, as before.
+  it('leaves a repeated ID alone once the first line has children', () => {
+    const result = parseStringSync(
+      `chr1\t.\tgene\t100\t500\t.\t+\t.\tID=APITD1
+chr1\t.\tmRNA\t100\t500\t.\t+\t.\tID=NM_1;Parent=APITD1
+chr1\t.\tgene\t150\t500\t.\t+\t.\tID=APITD1
+chr1\t.\tmRNA\t150\t500\t.\t+\t.\tID=NM_2;Parent=APITD1`,
+    )
+    expect(result.map(f => [f.start, f.subfeatures.length])).toEqual([
+      [99, 2],
+      [149, 0],
+    ])
+  })
+
+  it('leaves a repeated ID alone across types', () => {
+    const result = parseStringSync(
+      `chr1\t.\tgene\t100\t500\t.\t+\t.\tID=x
+chr1\t.\tmRNA\t100\t500\t.\t+\t.\tID=x`,
+    )
+    expect(result.map(f => [f.type, f.subfeatures.length])).toEqual([
+      ['gene', 0],
+      ['mRNA', 0],
     ])
   })
 

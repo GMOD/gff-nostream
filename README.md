@@ -80,10 +80,16 @@ The parser ignores comments, directives, and `##FASTA` sections.
 Attribute tags are matched with surrounding spaces trimmed, so `Name=A; ID=x`
 carries an `ID`, as it does under @gmod/gff.
 
-The parser does not merge multi-location features — the same ID on several
-lines, such as a CDS spanning several segments. Each line becomes its own flat
-feature, attaching to its parent, or standing as a top-level item,
-independently.
+A multi-location feature — the same ID on several lines, such as a CDS spanning
+several segments — stays one line per segment under its parent: each line
+attaches to the parent as its own flat feature. With no parent, the first line
+becomes the feature, spanning every segment, and each segment — the first
+included — hangs under it as a subfeature of the same type. An NCBI
+`cDNA_match`, written one line per aligned block, therefore comes back as one
+feature carrying its blocks, and a single-line feature gains no child. A
+repeated ID whose first line already has children, or whose lines differ in
+type, is a duplicate rather than one feature, and each line stays its own
+top-level item.
 
 A feature whose `Parent` never appears in the input comes back as a top-level
 feature, after the ones that did, rather than dropping. This happens routinely
