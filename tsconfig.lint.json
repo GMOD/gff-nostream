@@ -6,11 +6,7 @@
     "rootDir": ".",
     "noEmit": true
   },
-  // benchmarks/ and prof.ts call the real API, so they rot the same way a test
-  // does when a signature changes — silently, since nothing else reads them.
-  // gff.bench.ts is the exception: it imports the two builds
-  // scripts/build-both-branches.sh produces, which do not exist until you run
-  // `pnpm bench`.
-  "include": ["src", "test", "benchmarks", "prof.ts"],
-  "exclude": ["benchmarks/gff.bench.ts"]
+  // prof.ts calls the real API, so it rots the same way a test does when a
+  // signature changes — silently, since nothing else reads it.
+  "include": ["src", "test", "prof.ts"]
 }

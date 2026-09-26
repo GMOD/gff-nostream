@@ -39,12 +39,3 @@ attrs/line, 8.0MB against 7.1MB.
 suffixed with `2` if it collides with a fixed field. `getAttribute(f, 'name')`
 finds `Name=`; a reserved key such as `getAttribute(f, 'start')` always returns
 `undefined`, since no attribute is ever stored there.
-
-## Benchmarking
-
-`benchmarks/lazy.bench.ts` runs under `pnpm benchonly`, but read its numbers
-with care — the file's header comment explains why vitest's harness favors
-whichever arm runs second, and why sizing a GFF3 fixture up by concatenating a
-real file produces a tree structure that favors the lazy arm specifically. The
-figures above come from separate processes over a corpus of distinct genes, not
-from that file.

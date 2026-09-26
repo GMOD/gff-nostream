@@ -6,6 +6,5 @@ dist
 .vscode/
 esm
 .eslintcache
-esm_*/
 .claude/settings.local.json
 .claude/worktrees/
