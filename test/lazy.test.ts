@@ -31,6 +31,8 @@ const FILES = [
   'tair10.gff3',
   'mm9_sample_ensembl.gff3',
   'Saccharomyces_cerevisiae_EF3_e64.gff3',
+  'sars_cov2_NC_045512.2.gff3',
+  'hiv1_NC_001802.1.gff3',
 ]
 
 function featureLines(path: string) {

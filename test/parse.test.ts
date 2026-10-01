@@ -10,9 +10,20 @@ import {
   parseLines,
   parseLinesLazy,
   parseRecords,
+  parseRecordsLazy,
   parseStringSync,
 } from '../src/index.ts'
 import { unescape } from '../src/util.ts'
+
+import type { GffFeature } from '../src/index.ts'
+
+const gagPolLines = [
+  'NC_001802.1\tRefSeq\tgene\t336\t4642\t.\t+\t.\tID=gene-HIV1gp1;Name=gag-pol',
+  'NC_001802.1\tRefSeq\tCDS\t336\t1637\t.\t+\t0\tID=cds-NP_057849.4;Parent=gene-HIV1gp1',
+  'NC_001802.1\tRefSeq\tCDS\t1637\t4642\t.\t+\t0\tID=cds-NP_057849.4;Parent=gene-HIV1gp1',
+  'NC_001802.1\tRefSeq\tmature_protein_region_of_CDS\t1799\t2095\t.\t+\t.\tID=id-NP_057849.4:489..587;Parent=cds-NP_057849.4;product=protease',
+  'NC_001802.1\tRefSeq\tmature_protein_region_of_CDS\t3776\t4639\t.\t+\t.\tID=id-NP_057849.4:1148..1435;Parent=cds-NP_057849.4;product=integrase',
+]
 
 describe('GFF3 parser', () => {
   ;(
@@ -254,6 +265,162 @@ ctgA\t.\tCDS\t1\t100\t.\t+\t0\tID=cds2;Parent=mRNA2
 ctgA\t.\tCDS\t200\t300\t.\t+\t0\tID=cds2;Parent=mRNA2`,
     )
     expect(result.map(m => m.subfeatures.length)).toEqual([2, 2])
+  })
+
+  describe('a parented ID over several lines', () => {
+    const sars = fs.readFileSync('test/data/sars_cov2_NC_045512.2.gff3', 'utf8')
+    const hiv = fs.readFileSync('test/data/hiv1_NC_001802.1.gff3', 'utf8')
+
+    const span = (f: GffFeature) => [f.type, f.start, f.end]
+    const byGene = (features: GffFeature[], id: string) =>
+      features.find(f => f.id === id)!.subfeatures
+
+    it('folds SARS-CoV-2 ORF1ab, a -1 frameshift with mature peptides', () => {
+      const [pp1ab, pp1a, ...rest] = byGene(
+        parseStringSync(sars),
+        'gene-GU280_gp01',
+      )
+      expect(rest).toEqual([])
+      expect([pp1ab!.id, ...span(pp1ab!)]).toEqual([
+        'cds-YP_009724389.1',
+        'CDS',
+        265,
+        21555,
+      ])
+      expect([pp1a!.id, ...span(pp1a!)]).toEqual([
+        'cds-YP_009725295.1',
+        'CDS',
+        265,
+        13483,
+      ])
+      const segments = pp1ab!.subfeatures.filter(f => f.type === 'CDS')
+      expect(segments.map(span)).toEqual([
+        ['CDS', 265, 13468],
+        ['CDS', 13467, 21555],
+      ])
+      expect(segments.every(f => f.subfeatures.length === 0)).toBe(true)
+      const peptides = pp1ab!.subfeatures.slice(2)
+      expect(peptides.length).toBe(16)
+      expect(
+        peptides.every(f => f.type === 'mature_protein_region_of_CDS'),
+      ).toBe(true)
+      expect(peptides.at(-1)!.end).toBe(21552)
+      // nsp12 straddles the frameshift on two childless lines, so it stays two
+      expect(
+        peptides
+          .filter(f => f.product === 'RNA-dependent RNA polymerase')
+          .map(span),
+      ).toEqual([
+        ['mature_protein_region_of_CDS', 13441, 13468],
+        ['mature_protein_region_of_CDS', 13467, 16236],
+      ])
+    })
+
+    it('folds HIV-1 gag-pol and leaves the spliced, childless tat, rev and vpr alone', () => {
+      const features = parseStringSync(hiv)
+      const [gagPol, ...rest] = byGene(features, 'gene-HIV1gp1')
+      expect(rest).toEqual([])
+      expect(span(gagPol!)).toEqual(['CDS', 335, 4642])
+      expect(gagPol!.subfeatures.map(f => f.type)).toEqual([
+        'CDS',
+        'CDS',
+        ...Array<string>(7).fill('mature_protein_region_of_CDS'),
+      ])
+      expect(gagPol!.subfeatures.slice(0, 2).map(span)).toEqual([
+        ['CDS', 335, 1637],
+        ['CDS', 1636, 4642],
+      ])
+      for (const [gene, blocks] of [
+        ['gene-HIV1gp4', [5104, 5320]],
+        ['gene-HIV1gp5', [5376, 7924]],
+        ['gene-HIV1gp6', [5515, 7924]],
+      ] as const) {
+        const cds = byGene(features, gene)
+        expect(cds.map(f => f.start)).toEqual(blocks)
+        expect(cds.every(f => f.subfeatures.length === 0)).toBe(true)
+      }
+    })
+
+    it('folds whichever order the lines arrive in', () => {
+      const lines = sars
+        .split('\n')
+        .filter(line => line.length !== 0 && !line.startsWith('#'))
+      const byStart = (a: string, b: string) =>
+        +a.split('\t')[3]! - +b.split('\t')[3]!
+      for (const order of [[...lines].sort(byStart), [...lines].reverse()]) {
+        const [pp1ab] = byGene(parseLines(order), 'gene-GU280_gp01').filter(
+          f => f.id === 'cds-YP_009724389.1',
+        )
+        expect(span(pp1ab!)).toEqual(['CDS', 265, 21555])
+        expect(pp1ab!.subfeatures.length).toBe(18)
+      }
+    })
+
+    interface Tree {
+      subfeatures: Tree[]
+    }
+    const entryPoints: [string, (lines: string[]) => Tree[]][] = [
+      ['parseLines', l => parseLines(l)],
+      ['parseStringSync', l => parseStringSync(l.join('\n'))],
+      [
+        'parseRecords',
+        l => parseRecords(l.map(line => ({ line }))).map(r => r.feature),
+      ],
+      ['parseLinesLazy', l => parseLinesLazy(l)],
+      [
+        'parseRecordsLazy',
+        l => parseRecordsLazy(l.map(line => ({ line }))).map(r => r.feature),
+      ],
+    ]
+
+    it.each(entryPoints)('folds through %s', (_name, parse) => {
+      const [gene, ...rest] = parse(gagPolLines)
+      expect(rest).toEqual([])
+      expect(gene!.subfeatures.map(f => f.subfeatures.length)).toEqual([4])
+    })
+
+    // a slice that cuts off the gene leaves the CDS lines unparented
+    it('folds lines whose parent is absent into one top-level feature', () => {
+      const records = gagPolLines.slice(1).map((line, offset) => ({
+        line,
+        offset,
+      }))
+      const result = parseRecords(records)
+      expect(result.map(r => r.record.offset)).toEqual([0])
+      expect(span(result[0]!.feature)).toEqual(['CDS', 335, 4642])
+    })
+
+    it('leaves an NCBI mRNA’s childless shared-ID CDS lines one per line', () => {
+      const [gene] = parseStringSync(
+        `NC_000001.11\tBestRefSeq\tgene\t100\t900\t.\t+\t.\tID=gene-X
+NC_000001.11\tBestRefSeq\tmRNA\t100\t900\t.\t+\t.\tID=rna-NM_1;Parent=gene-X
+NC_000001.11\tBestRefSeq\texon\t100\t300\t.\t+\t.\tID=exon-NM_1-1;Parent=rna-NM_1
+NC_000001.11\tBestRefSeq\texon\t500\t900\t.\t+\t.\tID=exon-NM_1-2;Parent=rna-NM_1
+NC_000001.11\tBestRefSeq\tCDS\t150\t300\t.\t+\t0\tID=cds-NP_1;Parent=rna-NM_1
+NC_000001.11\tBestRefSeq\tCDS\t500\t800\t.\t+\t2\tID=cds-NP_1;Parent=rna-NM_1`,
+      )
+      const mrna = gene!.subfeatures[0]!
+      expect(mrna.subfeatures.map(span)).toEqual([
+        ['exon', 99, 300],
+        ['exon', 499, 900],
+        ['CDS', 149, 300],
+        ['CDS', 499, 800],
+      ])
+    })
+
+    it('leaves a further line under other parents where it is', () => {
+      const result = parseStringSync(
+        `ctgA\t.\tgene\t1\t500\t.\t+\t.\tID=g1
+ctgA\t.\tgene\t600\t900\t.\t+\t.\tID=g2
+ctgA\t.\tmRNA\t1\t500\t.\t+\t.\tID=t1;Parent=g1
+ctgA\t.\tmRNA\t600\t900\t.\t+\t.\tID=t1;Parent=g2
+ctgA\t.\texon\t1\t500\t.\t+\t.\tParent=t1`,
+      )
+      expect(result.map(g => g.subfeatures.map(span))).toEqual([
+        [['mRNA', 0, 500]],
+        [['mRNA', 599, 900]],
+      ])
+    })
   })
 
   it('keeps multi-value attributes as arrays', () => {

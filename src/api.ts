@@ -71,12 +71,12 @@ export function hasIdAttribute(line: string) {
 }
 
 /** Append a value to the array stored under key, creating the array if absent. */
-function appendOrphan<T>(orphans: Map<string, T[]>, key: string, value: T) {
-  const arr = orphans.get(key)
+function appendTo<K, T>(map: Map<K, T[]>, key: K, value: T) {
+  const arr = map.get(key)
   if (arr) {
     arr.push(value)
   } else {
-    orphans.set(key, [value])
+    map.set(key, [value])
   }
 }
 
@@ -107,24 +107,55 @@ function toStringArray(value: unknown): string[] {
  */
 type LinkStatus = 'top-level' | 'attached' | 'orphaned' | 'folded'
 
+interface Linkable<F> {
+  type: string | null
+  start: number
+  end: number
+  subfeatures: F[]
+}
+
+/**
+ * One parse's tree under construction. `split` holds the parentless features
+ * already folded into containers; `continuations` holds the further same-type
+ * lines of each parented ID, keyed by its first line.
+ */
+interface LinkState<F> {
+  byId: Map<string, F>
+  orphans: Map<string, F[]>
+  split: Set<F>
+  continuations: Map<F, F[]>
+}
+
+function newLinkState<F>(): LinkState<F> {
+  return {
+    byId: new Map(),
+    orphans: new Map(),
+    split: new Set(),
+    continuations: new Map(),
+  }
+}
+
+function parentsOf(feature: GffFeature) {
+  return toStringArray(feature.parent)
+}
+
+function parentsOfLazy(feature: LazyGffFeature) {
+  return toStringArray(getLinkAttributes(feature).parent)
+}
+
 /**
  * Register a feature's ID and attach it to its parent(s), building the
- * subfeature tree in `byId`/`orphans`. `split` holds the parentless features
- * that have already been turned into containers of their own segments.
+ * subfeature tree in `state`.
  */
 function linkFeature(
   feature: GffFeature,
-  byId: Map<string, GffFeature>,
-  orphans: Map<string, GffFeature[]>,
-  split: Set<GffFeature>,
+  state: LinkState<GffFeature>,
 ): LinkStatus {
   return linkResolved(
     feature,
     firstString(feature.id),
-    toStringArray(feature.parent),
-    byId,
-    orphans,
-    split,
+    parentsOf(feature),
+    state,
   )
 }
 
@@ -135,26 +166,10 @@ function linkFeature(
  */
 function linkFeatureLazy(
   feature: LazyGffFeature,
-  byId: Map<string, LazyGffFeature>,
-  orphans: Map<string, LazyGffFeature[]>,
-  split: Set<LazyGffFeature>,
+  state: LinkState<LazyGffFeature>,
 ): LinkStatus {
   const { id, parent } = getLinkAttributes(feature)
-  return linkResolved(
-    feature,
-    firstString(id),
-    toStringArray(parent),
-    byId,
-    orphans,
-    split,
-  )
-}
-
-interface Linkable<F> {
-  type: string | null
-  start: number
-  end: number
-  subfeatures: F[]
+  return linkResolved(feature, firstString(id), toStringArray(parent), state)
 }
 
 /**
@@ -186,18 +201,15 @@ function linkResolved<F extends Linkable<F>>(
   feature: F,
   id: string | undefined,
   parents: string[],
-  byId: Map<string, F>,
-  orphans: Map<string, F[]>,
-  split: Set<F>,
+  { byId, orphans, split, continuations }: LinkState<F>,
 ): LinkStatus {
-  // Register the id only the first time it is seen. A continuation line of a
-  // child (a CDS spanning several segments shares one ID across lines) skips
-  // registration but must still be attached to its parent below, so this is
-  // independent of the parent handling. A continuation line with no parent
-  // has nowhere else to go, so it folds into the line that registered the ID —
-  // unless that line already has children, or is of another type: then the ID
-  // is a duplicate (two genes both named by their symbol), not one feature over
-  // several lines, and the line stands on its own as it always did.
+  // Only the first line of an ID registers it. A further line with no parent
+  // has nowhere else to go, so it folds into that first line — unless the first
+  // line already has children, or is of another type: then the ID is a
+  // duplicate (two genes both named by their symbol), not one feature over
+  // several lines, and the line stands on its own. A further line with parents
+  // attaches to them as its own segment, and foldContinuations decides at the
+  // end whether its ID turned out to be one feature.
   if (id) {
     const first = byId.get(id)
     if (first === undefined) {
@@ -209,13 +221,13 @@ function linkResolved<F extends Linkable<F>>(
         }
         orphans.delete(id)
       }
-    } else if (
-      parents.length === 0 &&
-      first.type === feature.type &&
-      (split.has(first) || first.subfeatures.length === 0)
-    ) {
-      foldSegment(first, feature, split)
-      return 'folded'
+    } else if (first.type === feature.type) {
+      if (parents.length > 0) {
+        appendTo(continuations, first, feature)
+      } else if (split.has(first) || first.subfeatures.length === 0) {
+        foldSegment(first, feature, split)
+        return 'folded'
+      }
     }
   }
 
@@ -226,11 +238,62 @@ function linkResolved<F extends Linkable<F>>(
       parentFeature.subfeatures.push(feature)
       attached = true
     } else {
-      appendOrphan(orphans, parentId, feature)
+      appendTo(orphans, parentId, feature)
     }
   }
 
   return parents.length === 0 ? 'top-level' : attached ? 'attached' : 'orphaned'
+}
+
+function sameParents(a: string[], b: string[]) {
+  return a.length === b.length && a.every((p, i) => p === b[i])
+}
+
+/**
+ * A parented ID written over several lines is one discontinuous feature when
+ * its first line has children: NCBI writes a ribosomal-frameshift polyprotein's
+ * CDS (SARS-CoV-2 ORF1ab, HIV-1 gag-pol) as one line per reading frame and
+ * hangs its mature peptides off that ID. The first line becomes the feature,
+ * spanning every line, with its segments (a childless copy of itself first)
+ * followed by its children; the further lines leave their parents. A childless
+ * repeated ID — every CDS of an NCBI or Ensembl transcript — keeps one sibling
+ * per line, as does a further line naming other parents than the first.
+ *
+ * @returns the lines folded away, which an entry point must not collect as
+ *   unparented
+ */
+function foldContinuations<F extends Linkable<F>>(
+  { byId, continuations }: LinkState<F>,
+  getParents: (feature: F) => string[],
+) {
+  const folded = new Set<F>()
+  for (const [first, lines] of continuations) {
+    if (first.subfeatures.length > 0) {
+      const parents = getParents(first)
+      const segments = lines.filter(line =>
+        sameParents(getParents(line), parents),
+      )
+      if (segments.length > 0) {
+        first.subfeatures = [
+          { ...first, subfeatures: [] },
+          ...segments,
+          ...first.subfeatures,
+        ]
+        for (const segment of segments) {
+          first.start = Math.min(first.start, segment.start)
+          first.end = Math.max(first.end, segment.end)
+          folded.add(segment)
+        }
+        for (const parentId of parents) {
+          const parent = byId.get(parentId)
+          if (parent) {
+            parent.subfeatures = parent.subfeatures.filter(f => !folded.has(f))
+          }
+        }
+      }
+    }
+  }
+  return folded
 }
 
 /**
@@ -239,7 +302,7 @@ function linkResolved<F extends Linkable<F>>(
  * it, so presence in `byId` after the full pass means the feature was attached.
  */
 function isUnparented(feature: GffFeature, byId: Map<string, GffFeature>) {
-  return !toStringArray(feature.parent).some(parentId => byId.has(parentId))
+  return !parentsOf(feature).some(parentId => byId.has(parentId))
 }
 
 /**
@@ -251,9 +314,7 @@ function isUnparentedLazy(
   feature: LazyGffFeature,
   byId: Map<string, LazyGffFeature>,
 ) {
-  return !toStringArray(getLinkAttributes(feature).parent).some(parentId =>
-    byId.has(parentId),
-  )
+  return !parentsOfLazy(feature).some(parentId => byId.has(parentId))
 }
 
 /*
@@ -261,8 +322,9 @@ function isUnparentedLazy(
  * differently-shaped input. Routing them through one core that reads lines via
  * a callback was tried and reverted — it put every caller on a shared
  * polymorphic call site for no measured gain. The duplication is deliberate;
- * keep the loops in sync by hand. (The link step itself is *not* duplicated:
- * that is `linkResolved`, which the eager and lazy paths share.)
+ * keep the loops in sync by hand. (The link step and the closing fold are *not*
+ * duplicated: those are `linkResolved` and `foldContinuations`, which the eager
+ * and lazy paths share.)
  */
 
 /**
@@ -281,13 +343,11 @@ function isUnparentedLazy(
 export function parseLines(lines: readonly string[]): GffFeature[] {
   const items: GffFeature[] = []
   const pending: GffFeature[] = []
-  const byId = new Map<string, GffFeature>()
-  const orphans = new Map<string, GffFeature[]>()
-  const split = new Set<GffFeature>()
+  const state = newLinkState<GffFeature>()
 
   for (const line of lines) {
     const feature = parseFeature(line)
-    const status = linkFeature(feature, byId, orphans, split)
+    const status = linkFeature(feature, state)
     if (status === 'top-level') {
       items.push(feature)
     } else if (status === 'orphaned') {
@@ -295,8 +355,9 @@ export function parseLines(lines: readonly string[]): GffFeature[] {
     }
   }
 
+  const folded = foldContinuations(state, parentsOf)
   for (const feature of pending) {
-    if (isUnparented(feature, byId)) {
+    if (!folded.has(feature) && isUnparented(feature, state.byId)) {
       items.push(feature)
     }
   }
@@ -316,9 +377,7 @@ export function parseLines(lines: readonly string[]): GffFeature[] {
  */
 export function parseStringSync(str: string): GffFeature[] {
   const items: GffFeature[] = []
-  const byId = new Map<string, GffFeature>()
-  const orphans = new Map<string, GffFeature[]>()
-  const split = new Set<GffFeature>()
+  const state = newLinkState<GffFeature>()
   const pending: GffFeature[] = []
 
   // filters and parses in one pass rather than collecting the kept lines and
@@ -330,7 +389,7 @@ export function parseStringSync(str: string): GffFeature[] {
     }
     if (line.length !== 0 && !line.startsWith('#')) {
       const feature = parseFeature(line)
-      const status = linkFeature(feature, byId, orphans, split)
+      const status = linkFeature(feature, state)
       if (status === 'top-level') {
         items.push(feature)
       } else if (status === 'orphaned') {
@@ -339,8 +398,9 @@ export function parseStringSync(str: string): GffFeature[] {
     }
   }
 
+  const folded = foldContinuations(state, parentsOf)
   for (const feature of pending) {
-    if (isUnparented(feature, byId)) {
+    if (!folded.has(feature) && isUnparented(feature, state.byId)) {
       items.push(feature)
     }
   }
@@ -364,14 +424,12 @@ export function parseRecords<R extends LineRecord>(
   records: readonly R[],
 ): ParsedRecord<R>[] {
   const items: ParsedRecord<R>[] = []
-  const byId = new Map<string, GffFeature>()
-  const orphans = new Map<string, GffFeature[]>()
-  const split = new Set<GffFeature>()
+  const state = newLinkState<GffFeature>()
   const pending: ParsedRecord<R>[] = []
 
   for (const record of records) {
     const feature = parseFeature(record.line)
-    const status = linkFeature(feature, byId, orphans, split)
+    const status = linkFeature(feature, state)
     if (status === 'top-level') {
       items.push({ feature, record })
     } else if (status === 'orphaned') {
@@ -379,8 +437,12 @@ export function parseRecords<R extends LineRecord>(
     }
   }
 
+  const folded = foldContinuations(state, parentsOf)
   for (const parsed of pending) {
-    if (isUnparented(parsed.feature, byId)) {
+    if (
+      !folded.has(parsed.feature) &&
+      isUnparented(parsed.feature, state.byId)
+    ) {
       items.push(parsed)
     }
   }
@@ -400,13 +462,11 @@ export function parseRecords<R extends LineRecord>(
 export function parseLinesLazy(lines: readonly string[]): LazyGffFeature[] {
   const items: LazyGffFeature[] = []
   const pending: LazyGffFeature[] = []
-  const byId = new Map<string, LazyGffFeature>()
-  const orphans = new Map<string, LazyGffFeature[]>()
-  const split = new Set<LazyGffFeature>()
+  const state = newLinkState<LazyGffFeature>()
 
   for (const line of lines) {
     const feature = parseFeatureLazy(line)
-    const status = linkFeatureLazy(feature, byId, orphans, split)
+    const status = linkFeatureLazy(feature, state)
     if (status === 'top-level') {
       items.push(feature)
     } else if (status === 'orphaned') {
@@ -414,8 +474,9 @@ export function parseLinesLazy(lines: readonly string[]): LazyGffFeature[] {
     }
   }
 
+  const folded = foldContinuations(state, parentsOfLazy)
   for (const feature of pending) {
-    if (isUnparentedLazy(feature, byId)) {
+    if (!folded.has(feature) && isUnparentedLazy(feature, state.byId)) {
       items.push(feature)
     }
   }
@@ -436,14 +497,12 @@ export function parseRecordsLazy<R extends LineRecord>(
   records: readonly R[],
 ): ParsedLazyRecord<R>[] {
   const items: ParsedLazyRecord<R>[] = []
-  const byId = new Map<string, LazyGffFeature>()
-  const orphans = new Map<string, LazyGffFeature[]>()
-  const split = new Set<LazyGffFeature>()
+  const state = newLinkState<LazyGffFeature>()
   const pending: ParsedLazyRecord<R>[] = []
 
   for (const record of records) {
     const feature = parseFeatureLazy(record.line)
-    const status = linkFeatureLazy(feature, byId, orphans, split)
+    const status = linkFeatureLazy(feature, state)
     if (status === 'top-level') {
       items.push({ feature, record })
     } else if (status === 'orphaned') {
@@ -451,8 +510,12 @@ export function parseRecordsLazy<R extends LineRecord>(
     }
   }
 
+  const folded = foldContinuations(state, parentsOfLazy)
   for (const parsed of pending) {
-    if (isUnparentedLazy(parsed.feature, byId)) {
+    if (
+      !folded.has(parsed.feature) &&
+      isUnparentedLazy(parsed.feature, state.byId)
+    ) {
       items.push(parsed)
     }
   }

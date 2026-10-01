@@ -91,6 +91,15 @@ repeated ID whose first line already has children, or whose lines differ in
 type, is a duplicate rather than one feature, and each line stays its own
 top-level item.
 
+A parented ID folds the same way once something names it as a parent. NCBI
+writes a ribosomal-frameshift polyprotein (SARS-CoV-2 ORF1ab, HIV-1 gag-pol) as
+one CDS line per reading frame, all under one ID, and hangs its mature peptides
+off that ID. The parser returns one CDS spanning both frames: its subfeatures
+are its segments in file order, then the peptides, and the gene holds that one
+CDS. A shared-ID CDS that nothing names as a parent — every multi-exon CDS in an
+NCBI or Ensembl transcript — keeps one line per segment, as does a further line
+that names different parents from the first.
+
 A feature whose `Parent` never appears in the input comes back as a top-level
 feature, after the ones that did, rather than dropping. This happens routinely
 when parsing a slice of a file, e.g. a tabix region query that cuts off the
