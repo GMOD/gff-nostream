@@ -1,3 +1,13 @@
+## [5.6.0](https://github.com/GMOD/gff-nostream/compare/v5.5.0...v5.6.0) (2026-10-01)
+
+### Chores
+
+- Bump dev dependencies ([26cfefa](https://github.com/GMOD/gff-nostream/commit/26cfefacb96aa54938eaa8ce711d107a6fafb755))
+
+### Features
+
+- A frameshift polyprotein's CDS folds into one feature over its reading frames ([ea1b989](https://github.com/GMOD/gff-nostream/commit/ea1b989f490453441905598219a956bad8f65951))
+
 ## [5.5.0](https://github.com/GMOD/gff-nostream/compare/v5.4.0...v5.5.0) (2026-09-26)
 
 ### Chores
