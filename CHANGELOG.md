@@ -1,3 +1,9 @@
+## [5.6.1](https://github.com/GMOD/gff-nostream/compare/v5.6.0...v5.6.1) (2026-10-08)
+
+### Other Changes
+
+- Rename package to @gmod/gff-nostream ([024c16e](https://github.com/GMOD/gff-nostream/commit/024c16ef0e168100ddcb2b3d4b7c3050537ddda5))
+
 ## [5.6.0](https://github.com/GMOD/gff-nostream/compare/v5.5.0...v5.6.0) (2026-10-01)
 
 ### Chores
