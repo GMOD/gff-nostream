@@ -1,5 +1,5 @@
 {
-  "name": "gff-nostream",
+  "name": "@gmod/gff-nostream",
   "version": "5.6.0",
   "packageManager": "pnpm@11.15.1",
   "description": "utilities to read GFF3 data",
@@ -40,6 +40,9 @@
     "version": "git-cliff --tag v$npm_package_version --unreleased --prepend CHANGELOG.md && git add CHANGELOG.md",
     "postversion": "git push --follow-tags",
     "build": "pnpm build:esm && pnpm build:es5"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "bionode",

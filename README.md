@@ -1,6 +1,6 @@
-# gff-nostream
+# @gmod/gff-nostream
 
-[![NPM version](https://img.shields.io/npm/v/gff-nostream.svg?style=flat-square)](https://npmjs.org/package/gff-nostream)
+[![NPM version](https://img.shields.io/npm/v/@gmod/gff-nostream.svg?style=flat-square)](https://npmjs.org/package/@gmod/gff-nostream)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/GMOD/gff-nostream/publish.yml?branch=main)](https://github.com/GMOD/gff-nostream/actions/workflows/publish.yml)
 
 Parse GFF3 data. A simplified version of
@@ -9,14 +9,14 @@ Parse GFF3 data. A simplified version of
 ## Install
 
 ```sh
-pnpm add gff-nostream
+pnpm add @gmod/gff-nostream
 ```
 
 ## Usage
 
 ```js
 import { readFileSync } from 'node:fs'
-import { parseStringSync } from 'gff-nostream'
+import { parseStringSync } from '@gmod/gff-nostream'
 
 const features = parseStringSync(readFileSync('my_annotations.gff3', 'utf8'))
 ```
@@ -112,7 +112,7 @@ on `feature.attributeString` instead of spreading it into keys. It reads only
 `ID` and `Parent`, since it cannot build the tree without them.
 
 ```js
-import { getAttribute, parseLinesLazy } from 'gff-nostream'
+import { getAttribute, parseLinesLazy } from '@gmod/gff-nostream'
 
 const features = parseLinesLazy(lines)
 const names = features.map(f => getAttribute(f, 'name'))
