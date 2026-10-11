@@ -73,12 +73,12 @@ reserves `seq_id` and `refname` the same way, so a `Seq_id=` attribute becomes
 
 ## Parsing behavior
 
-These apply to every parse function below.
+The rules in this section apply to every parse function below.
 
 The parser ignores comments, directives, and `##FASTA` sections.
 
 Attribute tags are matched with surrounding spaces trimmed, so `Name=A; ID=x`
-carries an `ID`, as it does under @gmod/gff.
+has an `ID`, as it does under @gmod/gff.
 
 A multi-location feature — the same ID on several lines, such as a CDS spanning
 several segments — stays one line per segment under its parent: each line
@@ -86,7 +86,7 @@ attaches to the parent as its own flat feature. With no parent, the first line
 becomes the feature, spanning every segment, and each segment — the first
 included — hangs under it as a subfeature of the same type. An NCBI
 `cDNA_match`, written one line per aligned block, therefore comes back as one
-feature carrying its blocks, and a single-line feature gains no child. A
+feature that holds its blocks, and a single-line feature gains no child. A
 repeated ID whose first line already has children, or whose lines differ in
 type, is a duplicate rather than one feature, and each line stays its own
 top-level item.
@@ -143,7 +143,7 @@ and any `##FASTA` section.
 Parse an array of records wrapping raw GFF3 lines. Each top-level feature comes
 back paired with the record it came from, so a caller can attach its own stable
 id (a byte offset, a hash, …) without the parser stamping anything onto the
-feature. Records may carry extra fields (`R` is inferred), which pass through
+feature. Records may have extra fields (`R` is inferred), which pass through
 untouched on `record`.
 
 ```ts
@@ -190,10 +190,10 @@ it. Returns `''` for a line with fewer than two tabs.
 
 #### `hasIdAttribute(line: string): boolean`
 
-Whether a raw line carries an `ID` the parser would link children to. A record
-with no `ID` can be named by no `Parent=`, so this is the exact test for whether
-a line can have children, and it uses the parser's own tag scan, so it agrees
-with the linker about spacing and case. A region reader that widens its fetch to
+Whether a raw line has an `ID` the parser would link children to. A record with
+no `ID` can be named by no `Parent=`, so this is the exact test for whether a
+line can have children, and it uses the parser's own tag scan, so it agrees with
+the linker about spacing and case. A region reader that widens its fetch to
 complete a record's subfeature list can bound the widening with it.
 
 ### Types
