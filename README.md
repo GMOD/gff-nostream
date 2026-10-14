@@ -3,7 +3,7 @@
 [![NPM version](https://img.shields.io/npm/v/@gmod/gff-nostream.svg?style=flat-square)](https://npmjs.org/package/@gmod/gff-nostream)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/GMOD/gff-nostream/publish.yml?branch=main)](https://github.com/GMOD/gff-nostream/actions/workflows/publish.yml)
 
-Parses GFF3 data. This package is a simplified version of
+Parses GFF3 data, as a simplified version of
 [@gmod/gff](https://github.com/GMOD/gff-js) with no Node.js stream dependency.
 
 ## Install
@@ -102,7 +102,8 @@ spanning several segments.
   The parser adds each segment, the first included, under it as a subfeature of
   the same type.
 - An NCBI `cDNA_match`, written one line per aligned block, therefore comes back
-  as one feature that holds its blocks. A single-line feature gains no child.
+  as one feature that holds its blocks, while a single-line feature gains no
+  child.
 - The parser treats a repeated ID whose first line already has children, or
   whose lines differ in type, as a duplicate, and returns each line as a
   separate top-level item.
@@ -115,9 +116,9 @@ once another line names that ID as its parent.
   mature peptides that ID as their parent.
 - The parser returns one CDS spanning both frames. Its subfeatures are its
   segments in file order, then the peptides, and the gene holds that one CDS.
-- A shared-ID CDS that nothing names as a parent keeps one line per segment.
-  Every multi-exon CDS in an NCBI or Ensembl transcript is this case. So is a
-  further line that names different parents from the first.
+- A shared-ID CDS that nothing names as a parent keeps one line per segment, as
+  does a further line that names different parents from the first. Every
+  multi-exon CDS in an NCBI or Ensembl transcript is the first case.
 
 ## Lazy parsing
 
@@ -156,9 +157,9 @@ comments, and any `##FASTA` section.
 
 Parse an array of records wrapping raw GFF3 lines.
 
-- The parser returns each top-level feature paired with its source record, so a
-  caller can attach its own stable id (a byte offset, a hash, …). The parser
-  adds nothing to the feature.
+- The parser returns each top-level feature paired with its source record and
+  adds nothing to the feature itself, so a caller can attach its own stable id
+  (a byte offset, a hash, …).
 - Records may have extra fields (`R` is inferred), and the parser returns them
   unchanged on `record`.
 

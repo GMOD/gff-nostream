@@ -20,9 +20,9 @@ per arm:
 | parse only                          | 1.2-1.5x        | 1.9-2.2x       |
 | parse + the reads a render performs | 1.0-1.2x        | 1.0-1.2x       |
 
-The second row matches real use. Every `getAttribute` scans the attribute
-string, and a render calls it several times per feature, so by the time a render
-has read its attributes the lazy side has lost most of its parsing speedup. A
+The second row matches real use, where a render calls `getAttribute` several
+times per feature and each call scans the attribute string. By the time a render
+has read its attributes, the lazy side has lost most of its parsing speedup. A
 caller that reads every attribute of every feature should use the eager
 functions, which parse each attribute string once rather than once per lookup.
 
