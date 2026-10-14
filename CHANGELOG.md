@@ -1,3 +1,30 @@
+## [5.6.2](https://github.com/GMOD/gff-nostream/compare/v5.6.1...v5.6.2) (2026-10-14)
+
+### Bug Fixes
+
+- An attribute tag or strand named after an Object.prototype method reads literally ([6dfe024](https://github.com/GMOD/gff-nostream/commit/6dfe02476dc3c11b250ef68de5471f11e60053cc))
+
+### Documentation
+
+- Plainer README wording ([b96bc4e](https://github.com/GMOD/gff-nostream/commit/b96bc4e4fae4721903ab68d1b081b3071ebad97e))
+- Break up README walls of text ([6476036](https://github.com/GMOD/gff-nostream/commit/6476036630a3ac3ec25b397c3ed5ebe2622fbce3))
+
+### Other Changes
+
+- Rewrite AI-writing tropes in README and docs ([5f30f4e](https://github.com/GMOD/gff-nostream/commit/5f30f4edde06eabc3fe5c394e816798064568321))
+- Restore claims changed by the tropes rewrite ([d141362](https://github.com/GMOD/gff-nostream/commit/d1413625df94fd052251c0f130b98e647acaecef))
+- Fold short verdict sentences into their neighbours ([c1f30f7](https://github.com/GMOD/gff-nostream/commit/c1f30f734c898a021451e89ece9634dfe98201de))
+- Restore wording the tropes rewrite changed without a trope ([3296079](https://github.com/GMOD/gff-nostream/commit/3296079a8c9f8622b87cb4a83f9cf752637963c7))
+- Name the parser in the attribute-tag bullet ([fa9e212](https://github.com/GMOD/gff-nostream/commit/fa9e212f30fe416e0175746962cd6096145497d2))
+- Trim README wordiness ([552ef5b](https://github.com/GMOD/gff-nostream/commit/552ef5b826c1c483d46ba76b8fbbec4146f461e2))
+- Trim lazy-parsing doc ([ef5758e](https://github.com/GMOD/gff-nostream/commit/ef5758e23b4edd7bb2af2d775020fec79e0b519d))
+
+### Refactoring
+
+- HasIdAttribute moves beside the attribute scan it calls ([112ab50](https://github.com/GMOD/gff-nostream/commit/112ab50db327f5fbe6be3c1c2b1ddf0dd0a6987b))
+- FoldContinuations returns the end-of-parse unparented check ([a66e750](https://github.com/GMOD/gff-nostream/commit/a66e750c58f0b58ee7edf60ade810cc57106ebdb))
+- Share the fixed-column fields and the empty-column test ([d548f5e](https://github.com/GMOD/gff-nostream/commit/d548f5e2efbf8d70e988c0384bde685030af91ee))
+
 ## [5.6.1](https://github.com/GMOD/gff-nostream/compare/v5.6.0...v5.6.1) (2026-10-08)
 
 ### Other Changes
