@@ -20,11 +20,9 @@ per arm:
 | parse only                          | 1.2-1.5x        | 1.9-2.2x       |
 | parse + the reads a render performs | 1.0-1.2x        | 1.0-1.2x       |
 
-The second row matches real use, where a render calls `getAttribute` several
-times per feature and each call scans the attribute string. By the time a render
-has read its attributes, the lazy side has lost most of its parsing speedup. A
-caller that reads every attribute of every feature should use the eager
-functions, which parse each attribute string once rather than once per lookup.
+The second row matches real use: a render calls `getAttribute` several times per
+feature, each call rescans the attribute string, and the lazy side loses most of
+its speedup. A caller that reads every attribute should use the eager functions.
 
 For a caller that holds a whole file resident, the lazy side retains less heap,
 and that difference lasts longer than the parse speedup. On ~10 attrs/line, the
@@ -37,8 +35,6 @@ against 7.1MB.
 of a lazy feature contains that string and _not_ the attributes, so call
 `getAttributes` first to parse them into an object.
 
-`getAttribute` takes the _parsed_ key, not the raw GFF3 tag. The parsed key is
-lowercased, and suffixed with `2` if it collides with a fixed field.
-`getAttribute(f, 'name')` finds `Name=`; a reserved key such as
-`getAttribute(f, 'start')` always returns `undefined`, since the parser never
-stores an attribute under that key.
+`getAttribute` takes the _parsed_ key, lowercased and `2`-suffixed if it
+collides with a fixed field. `getAttribute(f, 'name')` finds `Name=`, and
+`getAttribute(f, 'start')` always returns `undefined`.
