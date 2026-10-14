@@ -158,11 +158,10 @@ const STRAND_MAP: Record<string, number | undefined> = withoutPrototype({
 })
 
 /**
- * A parsed GFF3 feature: a flat object with 0-based half-open coordinates,
- * numeric strand (`1`/`-1`/`0`), attributes spread as lowercase top-level keys,
- * and child features nested under `subfeatures`.
+ * The eight fixed columns, which both parsers read the same way: 0-based
+ * half-open coordinates and a numeric strand (`1`/`-1`/`0`).
  */
-export interface GffFeature {
+interface GffColumns {
   start: number
   end: number
   strand?: number
@@ -171,6 +170,13 @@ export interface GffFeature {
   refName: string
   phase?: number
   score?: number
+}
+
+/**
+ * A parsed GFF3 feature: the fixed columns, attributes spread as lowercase
+ * top-level keys, and child features nested under `subfeatures`.
+ */
+export interface GffFeature extends GffColumns {
   subfeatures: GffFeature[]
   [key: string]: unknown
 }
@@ -255,11 +261,7 @@ export function parseAttributes(
   result: Record<string, unknown>,
   shouldUnescape: boolean,
 ) {
-  if (
-    attrString === undefined ||
-    attrString.length === 0 ||
-    attrString === '.'
-  ) {
+  if (isEmpty(attrString)) {
     return
   }
 
@@ -302,15 +304,7 @@ export function parseAttributes(
  * read every attribute of every feature should use {@link parseFeature}, which
  * parses each attribute string once instead of once per lookup.
  */
-export interface LazyGffFeature {
-  start: number
-  end: number
-  strand?: number
-  type: string | null
-  source: string | null
-  refName: string
-  phase?: number
-  score?: number
+export interface LazyGffFeature extends GffColumns {
   subfeatures: LazyGffFeature[]
   /**
    * Raw, unparsed column 9. Present so attributes can be materialized later;
@@ -417,11 +411,7 @@ function scanAttributes(
 ) {
   let value0: string | string[] | undefined
   let value1: string | string[] | undefined
-  if (
-    attrString.length === 0 ||
-    attrString === '.' ||
-    (tag0 ?? alt0 ?? tag1 ?? alt1) === undefined
-  ) {
+  if (isEmpty(attrString) || (tag0 ?? alt0 ?? tag1 ?? alt1) === undefined) {
     return { value0, value1 }
   }
 
