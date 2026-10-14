@@ -484,17 +484,6 @@ export function getAttributes(feature: LazyGffFeature) {
 }
 
 /**
- * Whether column 9 carries an `ID` that {@link getLinkAttributes} would read,
- * resolved by the same scan so the two cannot disagree.
- */
-export function attributeStringHasId(attrString: string) {
-  return (
-    scanAttributes(attrString, 'id', undefined, undefined, undefined).value0 !==
-    undefined
-  )
-}
-
-/**
  * ID and Parent together, the two attributes tree-building needs, in one pass.
  * Neither name is reserved and neither ends in '2', so both resolve to a plain
  * tag with no alternate.
@@ -540,6 +529,38 @@ function scanTabs(line: string) {
     p = t + 1
   }
   return true
+}
+
+/**
+ * Whether a raw GFF3 line carries an `ID` attribute, which is the exact test
+ * for whether it can have children: a child names its parent with
+ * `Parent=<ID>`, so a record with no `ID` can be referenced by nothing. The
+ * scan is the one the parser links with, so the two cannot disagree, and
+ * column 9 is bounded at a stray tab exactly as {@link parseFeatureLazy} bounds
+ * it. A line with fewer than nine columns has no attributes to carry an ID.
+ *
+ * Counts tabs itself rather than calling {@link scanTabs}, because recording
+ * the offsets it never reads measured 2% slower.
+ */
+export function hasIdAttribute(line: string) {
+  let p = 0
+  for (let i = 0; i < 8; i++) {
+    const t = line.indexOf('\t', p)
+    if (t === -1) {
+      return false
+    }
+    p = t + 1
+  }
+  const attrEnd = line.indexOf('\t', p)
+  return (
+    scanAttributes(
+      line.slice(p, attrEnd === -1 ? undefined : attrEnd),
+      'id',
+      undefined,
+      undefined,
+      undefined,
+    ).value0 !== undefined
+  )
 }
 
 /** True when the column spanning `[from,to)` is empty or a lone '.'. */
