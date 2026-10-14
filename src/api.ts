@@ -228,8 +228,10 @@ function sameParents(a: string[], b: string[]) {
  * repeated ID — every CDS of an NCBI or Ensembl transcript — keeps one sibling
  * per line, as does a further line naming other parents than the first.
  *
- * @returns the lines folded away, which an entry point must not collect as
- *   unparented
+ * @returns whether a line still orphaned at the end of the input is
+ *   unparented, and so top-level: not folded away, and with none of its Parent
+ *   ids ever defined. Registering an id adopts everything waiting on it, so
+ *   presence in `byId` after the full pass means the line was attached.
  */
 function foldContinuations<F extends Linkable<F>>(
   { byId, continuations }: LinkState<F>,
@@ -262,28 +264,9 @@ function foldContinuations<F extends Linkable<F>>(
       }
     }
   }
-  return folded
-}
-
-/**
- * True when none of a feature's Parent ids were ever defined in the input, so
- * it was never nested anywhere. Registering an id adopts everything waiting on
- * it, so presence in `byId` after the full pass means the feature was attached.
- */
-function isUnparented(feature: GffFeature, byId: Map<string, GffFeature>) {
-  return !parentsOf(feature).some(parentId => byId.has(parentId))
-}
-
-/**
- * {@link isUnparented} for a lazily-parsed feature. Rescanning the attribute
- * string is fine here: this runs only over the features still orphaned after
- * the whole input has been read, not over every line.
- */
-function isUnparentedLazy(
-  feature: LazyGffFeature,
-  byId: Map<string, LazyGffFeature>,
-) {
-  return !parentsOfLazy(feature).some(parentId => byId.has(parentId))
+  return (feature: F) =>
+    !folded.has(feature) &&
+    !getParents(feature).some(parentId => byId.has(parentId))
 }
 
 /*
@@ -324,9 +307,9 @@ export function parseLines(lines: readonly string[]): GffFeature[] {
     }
   }
 
-  const folded = foldContinuations(state, parentsOf)
+  const isUnparented = foldContinuations(state, parentsOf)
   for (const feature of pending) {
-    if (!folded.has(feature) && isUnparented(feature, state.byId)) {
+    if (isUnparented(feature)) {
       items.push(feature)
     }
   }
@@ -367,9 +350,9 @@ export function parseStringSync(str: string): GffFeature[] {
     }
   }
 
-  const folded = foldContinuations(state, parentsOf)
+  const isUnparented = foldContinuations(state, parentsOf)
   for (const feature of pending) {
-    if (!folded.has(feature) && isUnparented(feature, state.byId)) {
+    if (isUnparented(feature)) {
       items.push(feature)
     }
   }
@@ -406,12 +389,9 @@ export function parseRecords<R extends LineRecord>(
     }
   }
 
-  const folded = foldContinuations(state, parentsOf)
+  const isUnparented = foldContinuations(state, parentsOf)
   for (const parsed of pending) {
-    if (
-      !folded.has(parsed.feature) &&
-      isUnparented(parsed.feature, state.byId)
-    ) {
+    if (isUnparented(parsed.feature)) {
       items.push(parsed)
     }
   }
@@ -443,9 +423,9 @@ export function parseLinesLazy(lines: readonly string[]): LazyGffFeature[] {
     }
   }
 
-  const folded = foldContinuations(state, parentsOfLazy)
+  const isUnparented = foldContinuations(state, parentsOfLazy)
   for (const feature of pending) {
-    if (!folded.has(feature) && isUnparentedLazy(feature, state.byId)) {
+    if (isUnparented(feature)) {
       items.push(feature)
     }
   }
@@ -479,12 +459,9 @@ export function parseRecordsLazy<R extends LineRecord>(
     }
   }
 
-  const folded = foldContinuations(state, parentsOfLazy)
+  const isUnparented = foldContinuations(state, parentsOfLazy)
   for (const parsed of pending) {
-    if (
-      !folded.has(parsed.feature) &&
-      isUnparentedLazy(parsed.feature, state.byId)
-    ) {
+    if (isUnparented(parsed.feature)) {
       items.push(parsed)
     }
   }
