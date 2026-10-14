@@ -115,9 +115,9 @@ once another line names that ID as its parent.
   mature peptides that ID as their parent.
 - The parser returns one CDS spanning both frames. Its subfeatures are its
   segments in file order, then the peptides, and the gene holds that one CDS.
-- For a shared-ID CDS that no line names as a parent, the parser keeps one
-  feature per segment. Every multi-exon CDS in an NCBI or Ensembl transcript is
-  this case. So is a further line that names different parents from the first.
+- A shared-ID CDS that nothing names as a parent keeps one line per segment.
+  Every multi-exon CDS in an NCBI or Ensembl transcript is this case. So is a
+  further line that names different parents from the first.
 
 ## Lazy parsing
 
