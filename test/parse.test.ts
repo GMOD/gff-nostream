@@ -566,6 +566,18 @@ chr1\t.\texon\t1\t50\t.\t+\t.\tParent=g1`,
     expect(result[0]!.foo).toBeUndefined()
     expect(result[0]!.bar).toBeUndefined()
   })
+
+  it('reads a tag or strand named after an Object.prototype method literally', () => {
+    const line =
+      'chr1\t.\tgene\t1\t100\t.\tconstructor\t.\tID=g1;constructor=a;toString=b'
+    const [eager] = parseStringSync(line)
+    const [lazy] = parseLinesLazy([line])
+    expect(eager!.strand).toBeUndefined()
+    expect(lazy!.strand).toBeUndefined()
+    expect(eager!.constructor).toBe('a')
+    expect(eager!.tostring).toBe('b')
+    expect(getAttribute(lazy!, 'constructor')).toBe('a')
+  })
 })
 
 describe('extractType', () => {

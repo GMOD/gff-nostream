@@ -121,9 +121,15 @@ const JBROWSE_DEFAULT_FIELDS = new Set([
   'subfeatures',
 ])
 
+// Lookup tables keyed by file content: without a prototype, a tag or strand
+// such as `constructor` reads undefined rather than an Object.prototype method
+function withoutPrototype<T extends object>(table: T): T {
+  return Object.setPrototypeOf(table, null) as T
+}
+
 // Pre-computed lowercase for common GFF3 spec attribute names to avoid
 // toLowerCase() calls in the hot path
-const COMMON_ATTRS: Record<string, string | undefined> = {
+const COMMON_ATTRS: Record<string, string | undefined> = withoutPrototype({
   ID: 'id',
   Name: 'name',
   Parent: 'parent',
@@ -143,13 +149,13 @@ const COMMON_ATTRS: Record<string, string | undefined> = {
   alias: 'alias',
   target: 'target',
   gap: 'gap',
-}
+})
 
-const STRAND_MAP: Record<string, number | undefined> = {
+const STRAND_MAP: Record<string, number | undefined> = withoutPrototype({
   '+': 1,
   '-': -1,
   '.': 0,
-}
+})
 
 /**
  * A parsed GFF3 feature: a flat object with 0-based half-open coordinates,
