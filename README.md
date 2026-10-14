@@ -84,10 +84,10 @@ The fixed fields are `refName`, `source`, `type`, `start`, `end`, `score`,
 The rules in this section apply to every parse function below.
 
 - The parser ignores comments, directives, and `##FASTA` sections.
-- The parser trims spaces around attribute tags before matching them, so
-  `Name=A; ID=x` has an `ID`, as it does under @gmod/gff.
-- The parser keeps a feature whose `Parent` never appears in the input, and
-  returns it as a top-level feature after the ones that did. A slice of a file
+- Attribute tags are matched with surrounding spaces trimmed, so `Name=A; ID=x`
+  has an `ID`, as it does under @gmod/gff.
+- A feature whose `Parent` never appears in the input comes back as a top-level
+  feature, after the ones that did, rather than dropping. A slice of a file
   routinely contains such features, for example when a tabix region query cuts
   off the parent line.
 
@@ -104,9 +104,9 @@ spanning several segments.
 - An NCBI `cDNA_match`, written one line per aligned block, therefore comes back
   as one feature that holds its blocks, while a single-line feature gains no
   child.
-- The parser treats a repeated ID whose first line already has children, or
-  whose lines differ in type, as a duplicate, and returns each line as a
-  separate top-level item.
+- A repeated ID whose first line already has children, or whose lines differ in
+  type, is a duplicate rather than one feature, and each line stays a separate
+  top-level item.
 
 The parser merges the lines of a repeated ID that has a parent in the same way,
 once another line names that ID as its parent.
@@ -185,9 +185,9 @@ Parse a single line, with no tree building.
 #### `getAttribute(feature: LazyGffFeature, key: string): unknown`
 
 The value of one attribute, by its parsed key (lowercased, `2`-suffixed if
-reserved). `getAttribute` returns a single-valued attribute as a string, a
-multi-valued one as a string array, and an absent one as `undefined`, the same
-types the eager parser produces.
+reserved). A single-valued attribute comes back as a string, a multi-valued one
+as a string array, and an absent one as `undefined`, the same shapes the eager
+parser produces.
 
 #### `getAttributes(feature: LazyGffFeature): Record<string, unknown>`
 
