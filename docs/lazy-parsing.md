@@ -2,40 +2,43 @@
 
 `parseLinesLazy`, `parseRecordsLazy`, and `parseFeatureLazy` parse the eight
 fixed columns exactly as the eager functions do, but leave column 9 as raw text
-on `feature.attributeString`. They read only `ID` and `Parent`, because nothing
-can build the parent/child tree without those two.
+on `feature.attributeString`. They read only `ID` and `Parent`, because the
+parser needs those two to build the parent/child tree.
 
 ## Trade-off
 
-On annotation-grade input (GENCODE, NCBI, Ensembl — 15-20 attributes a line)
-turning column 9 into object keys is about two thirds of the cost of parsing a
-line. Deferring it helps when most of those attributes are never read.
+On annotation-grade input such as GENCODE, NCBI or Ensembl, with 15-20
+attributes a line, turning column 9 into object keys is about two thirds of the
+cost of parsing a line. Deferring it helps when most of those attributes are
+never read.
 
-Measured against a generated corpus of distinct genes, one process per arm:
+We measured both sides on a generated corpus of distinct genes, with one process
+per arm:
 
 | workload                            | ~1.2 attrs/line | ~10 attrs/line |
 | ----------------------------------- | --------------- | -------------- |
 | parse only                          | 1.2-1.5x        | 1.9-2.2x       |
 | parse + the reads a render performs | 1.0-1.2x        | 1.0-1.2x       |
 
-The second row is the practical case: every `getAttribute` is a scan, and a
-render does several per feature, so at the point of use the lazy side gives back
-most of the parse win. Deferring work only helps if the consumer does not pay
-the cost back later. A caller that reads every attribute of every feature should
-use the eager functions, which parse each attribute string once rather than once
-per lookup.
+The second row matches real use. Every `getAttribute` scans the attribute
+string, and a render calls it several times per feature, so by the time a render
+has read its attributes the lazy side has lost most of its parsing speedup. A
+caller that reads every attribute of every feature should use the eager
+functions, which parse each attribute string once rather than once per lookup.
 
-Retained heap is the more durable effect for a caller that holds a whole file
-resident: on ~10 attrs/line, 16.1MB eager against 7.0MB lazy (2.3x); on ~1.2
-attrs/line, 8.0MB against 7.1MB.
+For a caller that holds a whole file resident, the lazy side retains less heap,
+and that difference lasts longer than the parse speedup. On ~10 attrs/line, the
+eager side retains 16.1MB against 7.0MB lazy (2.3x); on ~1.2 attrs/line, 8.0MB
+against 7.1MB.
 
 ## Gotchas
 
-`attributeString` is a normal enumerable property. Spreading or
-`JSON.stringify`-ing a lazy feature yields that string and _not_ the attributes
-— call `getAttributes` to materialize them first.
+`attributeString` is a normal enumerable property. A spread or `JSON.stringify`
+of a lazy feature contains that string and _not_ the attributes, so call
+`getAttributes` first to parse them into an object.
 
-`getAttribute` takes the _parsed_ key, not the raw GFF3 tag: lowercased, and
-suffixed with `2` if it collides with a fixed field. `getAttribute(f, 'name')`
-finds `Name=`; a reserved key such as `getAttribute(f, 'start')` always returns
-`undefined`, since no attribute is ever stored there.
+`getAttribute` takes the _parsed_ key, not the raw GFF3 tag. The parsed key is
+lowercased, and suffixed with `2` if it collides with a fixed field.
+`getAttribute(f, 'name')` finds `Name=`; a reserved key such as
+`getAttribute(f, 'start')` always returns `undefined`, since the parser never
+stores an attribute under that key.
