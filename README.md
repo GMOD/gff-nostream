@@ -84,8 +84,8 @@ The fixed fields are `refName`, `source`, `type`, `start`, `end`, `score`,
 The rules in this section apply to every parse function below.
 
 - The parser ignores comments, directives, and `##FASTA` sections.
-- Attribute tags are matched with surrounding spaces trimmed, so `Name=A; ID=x`
-  has an `ID`, as it does under @gmod/gff.
+- The parser trims spaces around attribute tags before matching them, so
+  `Name=A; ID=x` has an `ID`, as it does under @gmod/gff.
 - A feature whose `Parent` never appears in the input comes back as a top-level
   feature, after the ones that did, rather than dropping. A slice of a file
   routinely contains such features, for example when a tabix region query cuts
