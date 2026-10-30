@@ -12,22 +12,26 @@ attributes a line, turning column 9 into object keys is about two thirds of the
 cost of parsing a line. Deferring it helps when most of those attributes are
 never read.
 
-We measured both sides on a generated corpus of distinct genes, with one process
-per arm:
+How much faster the lazy side is, measured with 5.6.4 on node 24.21, one process
+per arm, median of 12 runs:
 
-| workload                            | ~1.2 attrs/line | ~10 attrs/line |
-| ----------------------------------- | --------------- | -------------- |
-| parse only                          | 1.2-1.5x        | 1.9-2.2x       |
-| parse + the reads a render performs | 1.0-1.2x        | 1.0-1.2x       |
+- maize NAM's gene models: 1.1M lines, ~4 attrs/line
+- a GENCODE-shaped file: 135k lines, ~10 attrs/line
 
-The second row matches real use: a render calls `getAttribute` several times per
-feature, each call rescans the attribute string, and the lazy side loses most of
-its speedup. A caller that reads every attribute should use the eager functions.
+| workload                            | maize | GENCODE-shaped |
+| ----------------------------------- | ----- | -------------- |
+| parse only                          | 1.9x  | 3.2x           |
+| parse + `name`, `id`, `gbkey` reads | 1.4x  | 1.8x           |
+
+The second row is closer to real use. A render reads a few attributes per
+feature, and each `getAttribute` call rescans the attribute string. A caller
+that reads every attribute should use the eager functions. The scripts behind
+these figures are not in the repo.
 
 For a caller that holds a whole file resident, the lazy side retains less heap,
-and that difference lasts longer than the parse speedup. On ~10 attrs/line, the
-eager side retains 16.1MB against 7.0MB lazy (2.3x); on ~1.2 attrs/line, 8.0MB
-against 7.1MB.
+and that difference lasts longer than the parse speedup. On an earlier generated
+corpus with ~10 attrs/line, the eager side retained 16.1MB against 7.0MB lazy
+(2.3x); at ~1.2 attrs/line, 8.0MB against 7.1MB.
 
 ## Gotchas
 
