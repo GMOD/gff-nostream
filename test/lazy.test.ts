@@ -173,6 +173,12 @@ describe('getAttribute', () => {
     agrees('Gene_Name=ABC', 'gene_name')
   })
 
+  it('finds nothing under a key with an uppercase letter', () => {
+    agrees('itemRgb=255,0,0', 'itemRgb')
+    agrees('Name=foo', 'Name')
+    agrees('Start=5', 'Start2')
+  })
+
   it('lowercases a non-ASCII tag as toLowerCase does', () => {
     // the Kelvin sign folds to an ASCII k
     agrees('\u212Aind=x', 'kind')

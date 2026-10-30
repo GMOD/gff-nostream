@@ -532,6 +532,18 @@ ctgA\t.\texon\t1\t50\t.\t+\t.\tID=e1;Parent=g1,missing_gene`,
     expect(parseLines(lines)).toEqual(parseStringSync(str))
   })
 
+  it('links lines that keep the \\r of a CRLF file split on \\n', () => {
+    const lines = [
+      'ctgA\t.\tgene\t1\t100\t.\t+\t.\tID=g1\r',
+      'ctgA\t.\tmRNA\t1\t100\t.\t+\t.\tParent=g1;ID=m1\r',
+    ]
+    for (const result of [parseLines(lines), parseLinesLazy(lines)]) {
+      expect(result.length).toBe(1)
+      expect(result[0]!.subfeatures.length).toBe(1)
+    }
+    expect(parseLines(lines)[0]!.id).toBe('g1')
+  })
+
   it('parseRecords keeps orphans paired with their record', () => {
     const records = [
       { line: 'ctgA\t.\texon\t1\t50\t.\t+\t.\tParent=missing', offset: 7 },

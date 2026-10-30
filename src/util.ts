@@ -187,11 +187,17 @@ function indexOrEnd(s: string, char: string, from: number, end: number) {
   return idx === -1 || idx > end ? end : idx
 }
 
-/** Raw lines handed to parseRecords can still carry their line terminator. */
+/**
+ * A caller can hand parseRecords a line that still ends in its terminator, or
+ * in the `\r` of a CRLF file split on `\n`.
+ */
 function trimLineEnd(s: string) {
   let end = s.length
   if (s[end - 1] === '\n') {
-    end -= s[end - 2] === '\r' ? 2 : 1
+    end--
+  }
+  if (s[end - 1] === '\r') {
+    end--
   }
   return end === s.length ? s : s.slice(0, end)
 }
@@ -327,10 +333,13 @@ export interface LazyGffFeature extends GffColumns {
  * reserved is reachable two ways — from the stem (`Start` -> `start2`) and from
  * a tag literally named `start2`. Which of those wins is decided by position,
  * not by preference: the scan keeps the last match either way, as the eager
- * parser's last-wins assignment does.
+ * parser's last-wins assignment does. A key with an uppercase letter is
+ * unreachable too, so a caller asking for `itemRgb` gets no scan at all.
  */
 function primaryTag(key: string) {
-  return JBROWSE_DEFAULT_FIELDS.has(key) ? undefined : key
+  return JBROWSE_DEFAULT_FIELDS.has(key) || key.toLowerCase() !== key
+    ? undefined
+    : key
 }
 
 function alternateTag(key: string) {
