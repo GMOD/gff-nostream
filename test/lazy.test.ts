@@ -173,6 +173,15 @@ describe('getAttribute', () => {
     agrees('Gene_Name=ABC', 'gene_name')
   })
 
+  it('lowercases a non-ASCII tag as toLowerCase does', () => {
+    // the Kelvin sign folds to an ASCII k, keeping its length
+    agrees('Kind=x', 'kind')
+    // İ folds to i plus U+0307, one character longer
+    agrees('İD=x', 'i̇d')
+    agrees('İD=x', 'id')
+    agrees('Äİ=x', 'äi̇')
+  })
+
   it('collapses a single value but keeps multiples as an array', () => {
     agrees('Parent=a', 'parent')
     agrees('Parent=a,b,c', 'parent')

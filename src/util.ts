@@ -344,8 +344,11 @@ function alternateTag(key: string) {
  * Case-insensitive compare of `s[start,end)` against an already-lowercased
  * `lower`, without slicing the tag out first. ASCII is folded inline; a tag
  * containing anything else falls back to `toLowerCase`, which is the only way
- * to be right about non-ASCII case folding (and about the rare fold that
- * changes length, hence the second loop).
+ * to be right about non-ASCII case folding.
+ *
+ * The one fold that changes length is İ (U+0130) to i̇ (`i` plus U+0307), and
+ * it lengthens. A tag longer than `lower` therefore never matches, and a
+ * shorter one needs a U+0307 in `lower`.
  */
 function tagMatches(s: string, start: number, end: number, lower: string) {
   if (end - start === lower.length) {
@@ -361,12 +364,11 @@ function tagMatches(s: string, start: number, end: number, lower: string) {
     }
     return true
   }
-  for (let i = start; i < end; i++) {
-    if (s.charCodeAt(i) >= 128) {
-      return s.slice(start, end).toLowerCase() === lower
-    }
-  }
-  return false
+  return (
+    end - start < lower.length &&
+    lower.includes('̇') &&
+    s.slice(start, end).toLowerCase() === lower
+  )
 }
 
 /** True when the tag at `[start,end)` is `tag`, or `alt` if one is given. */
