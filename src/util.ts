@@ -203,6 +203,7 @@ function trimLineEnd(s: string) {
 }
 
 const SPACE = ' '.charCodeAt(0)
+const EQUALS = '='.charCodeAt(0)
 
 /**
  * The spec puts a tag flush against its separator, and real files put a space
@@ -405,6 +406,11 @@ function tagIs(
  * containing a '%'. `unescape` already returns its input untouched when the
  * value has none, so the gate would only add a scan of the whole string to
  * every lookup.
+ *
+ * An ASCII tag whose first letter is neither slot's skips the search for its
+ * `=`, which is most of the cost of passing over it. A tag opening with `=` or
+ * a non-ASCII character takes the full path, so an empty tag and a non-ASCII
+ * case fold still compare as before.
  */
 function scanAttributes(
   attrString: string,
@@ -421,10 +427,18 @@ function scanAttributes(
 
   const attrs = trimLineEnd(attrString)
   const len = attrs.length
+  const first0 = (tag0 ?? alt0)?.charCodeAt(0)
+  const first1 = (tag1 ?? alt1)?.charCodeAt(0)
 
   let start = 0
   while (start < len) {
     const semiIdx = indexOrEnd(attrs, ';', start, len)
+    const c = attrs.charCodeAt(skipSpaces(attrs, start, semiIdx))
+    const lc = c >= 65 && c <= 90 ? c + 32 : c
+    if (lc < 128 && lc !== EQUALS && lc !== first0 && lc !== first1) {
+      start = semiIdx + 1
+      continue
+    }
     const eqIdx = attrs.indexOf('=', start)
     if (eqIdx !== -1 && eqIdx + 1 < semiIdx) {
       const tagStart = skipSpaces(attrs, start, eqIdx)

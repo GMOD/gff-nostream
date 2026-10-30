@@ -179,6 +179,14 @@ describe('getAttribute', () => {
     agrees('Start=5', 'Start2')
   })
 
+  it('finds a tag past others with a different first letter', () => {
+    agrees('alias=a;Gbkey=b;gene=c;gbkey2=d', 'gbkey')
+    agrees(' gbkey =a; Gbkey=b', 'gbkey')
+    agrees('=x;gbkey=a', '')
+    agrees('ärger=x;gbkey=a', 'ärger')
+    agrees('Ärger=x;gbkey=a', 'ärger')
+  })
+
   it('lowercases a non-ASCII tag as toLowerCase does', () => {
     // the Kelvin sign folds to an ASCII k
     agrees('\u212Aind=x', 'kind')
