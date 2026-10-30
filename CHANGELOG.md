@@ -1,3 +1,13 @@
+## [5.6.4](https://github.com/GMOD/gff-nostream/compare/v5.6.3...v5.6.4) (2026-10-30)
+
+### Chores
+
+- Update dependencies ([38e1865](https://github.com/GMOD/gff-nostream/commit/38e1865c109c4687de138367192aa9bdeb7cd238))
+
+### Performance Improvements
+
+- Pass over a tag whose first letter rules it out ([194c01b](https://github.com/GMOD/gff-nostream/commit/194c01ba1633175cbca988745501a7963bbaf726))
+
 ## [5.6.3](https://github.com/GMOD/gff-nostream/compare/v5.6.2...v5.6.3) (2026-10-30)
 
 ### Performance Improvements
