@@ -1,3 +1,14 @@
+## [5.6.3](https://github.com/GMOD/gff-nostream/compare/v5.6.2...v5.6.3) (2026-10-30)
+
+### Performance Improvements
+
+- Skip the tag scan when a tag's length rules out a match ([895a330](https://github.com/GMOD/gff-nostream/commit/895a330dd4749aa31c639c9eec2057b6a017ed05))
+- No scan for a key no tag can produce; trim a lone trailing \r ([ec3d193](https://github.com/GMOD/gff-nostream/commit/ec3d193a5776a91b6abe8fdebdcce7e8c97a3121))
+
+### Refactoring
+
+- A tag of another length never matches ([8ce7dca](https://github.com/GMOD/gff-nostream/commit/8ce7dcab77fa279e5997e6c6d6e3216e1694ad07))
+
 ## [5.6.2](https://github.com/GMOD/gff-nostream/compare/v5.6.1...v5.6.2) (2026-10-14)
 
 ### Bug Fixes
