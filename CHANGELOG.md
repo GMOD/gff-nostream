@@ -1,3 +1,23 @@
+## [5.6.5](https://github.com/GMOD/gff-nostream/compare/v5.6.4...v5.6.5) (2026-11-15)
+
+### Bug Fixes
+
+- A __proto__ attribute tag is stored as __proto__2 ([8bd838c](https://github.com/GMOD/gff-nostream/commit/8bd838c4dec76ce26f84c6efe1c610c1bc067574))
+- ParseStringSync no longer keeps its input alive after returning ([6ff32e1](https://github.com/GMOD/gff-nostream/commit/6ff32e16f1e6f2328d4e15ebc6fbb7ea344c0cbd))
+
+### Documentation
+
+- Lazy-parsing figures for 5.6.4 ([1b073ce](https://github.com/GMOD/gff-nostream/commit/1b073cedd5f9c313bfdcba00e6ea734f0d0764f8))
+- Trusted publishing adds provenance without a --provenance flag ([6171e1e](https://github.com/GMOD/gff-nostream/commit/6171e1e80d958380c75c9068750714fe175d4c57))
+
+### Other Changes
+
+- Bump deps, drop unused dev deps and stale ignores ([4fe5aa6](https://github.com/GMOD/gff-nostream/commit/4fe5aa6037e9805962b717dc2ab818ff5a9610f6))
+
+### Performance Improvements
+
+- Cache tag keys, and stop the comma search at the attribute's end ([e5c31d3](https://github.com/GMOD/gff-nostream/commit/e5c31d37d94ee0cf333bf62e4ac2830081d4e078))
+
 ## [5.6.4](https://github.com/GMOD/gff-nostream/compare/v5.6.3...v5.6.4) (2026-10-30)
 
 ### Chores
