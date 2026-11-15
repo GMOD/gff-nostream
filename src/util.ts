@@ -206,22 +206,21 @@ function trimSpaces(s: string, from: number, to: number) {
 }
 
 // Feature key for each tag seen so far, capped because tags come from the
-// file. An object rather than a Map: a property key is interned, so the cache
-// holds a copy of each tag where a Map would hold the slice of the input it
-// was cut from, keeping the whole input alive.
-const ATTRIBUTE_KEYS: Record<string, string | undefined> = withoutPrototype({})
+// file. A Map, because an object lookup by a freshly sliced tag first searches
+// V8's table of interned strings. Each tag is stored as a structuredClone copy:
+// the slice itself would keep the whole input it was cut from alive.
+const ATTRIBUTE_KEYS = new Map<string, string>()
 const MAX_ATTRIBUTE_KEYS = 1024
-let attributeKeyCount = 0
 
 /** Feature key an attribute tag is stored under: lowercased, and suffixed if reserved. */
 function attributeKey(tag: string) {
-  const cached = ATTRIBUTE_KEYS[tag]
+  const cached = ATTRIBUTE_KEYS.get(tag)
   if (cached === undefined) {
-    const lower = tag.toLowerCase()
+    const owned = structuredClone(tag)
+    const lower = owned.toLowerCase()
     const key = JBROWSE_DEFAULT_FIELDS.has(lower) ? `${lower}2` : lower
-    if (attributeKeyCount < MAX_ATTRIBUTE_KEYS) {
-      ATTRIBUTE_KEYS[tag] = key
-      attributeKeyCount++
+    if (ATTRIBUTE_KEYS.size < MAX_ATTRIBUTE_KEYS) {
+      ATTRIBUTE_KEYS.set(owned, key)
     }
     return key
   } else {
