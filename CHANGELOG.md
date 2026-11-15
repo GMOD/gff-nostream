@@ -1,3 +1,17 @@
+## [5.6.6](https://github.com/GMOD/gff-nostream/compare/v5.6.5...v5.6.6) (2026-11-15)
+
+### Chores
+
+- Drop persisted checkout credentials and the publish job's cache ([0dff47e](https://github.com/GMOD/gff-nostream/commit/0dff47e909c2da9858c79ec66eedbaa60b2368bc))
+
+### Documentation
+
+- Lazy-parsing figures for 5.6.5 ([0fb1a9b](https://github.com/GMOD/gff-nostream/commit/0fb1a9b9e9918daaf1908bc267080399b44e5669))
+
+### Performance Improvements
+
+- Key the tag cache with a Map of copied tags ([8cf5031](https://github.com/GMOD/gff-nostream/commit/8cf503118995473a06f90904aab5e7ad8fad7997))
+
 ## [5.6.5](https://github.com/GMOD/gff-nostream/compare/v5.6.4...v5.6.5) (2026-11-15)
 
 ### Bug Fixes
