@@ -12,21 +12,23 @@ attributes a line, turning column 9 into object keys is about two thirds of the
 cost of parsing a line. Deferring it helps when most of those attributes are
 never read.
 
-How much faster the lazy side is, measured with 5.6.4 on node 24.21, one process
-per arm, median of 12 runs:
+How much faster the lazy side is, measured with 5.6.5 on node 24.21, one process
+per arm, median of 12 runs, averaged over two sessions:
 
 - maize NAM's gene models: 1.1M lines, ~4 attrs/line
 - a GENCODE-shaped file: 135k lines, ~10 attrs/line
 
 | workload                            | maize | GENCODE-shaped |
 | ----------------------------------- | ----- | -------------- |
-| parse only                          | 1.9x  | 3.2x           |
-| parse + `name`, `id`, `gbkey` reads | 1.4x  | 1.8x           |
+| parse only                          | 1.7x  | 2.2x           |
+| parse + `name`, `id`, `gbkey` reads | 1.4x  | 1.5x           |
 
 The second row is closer to real use. A render reads a few attributes per
 feature, and each `getAttribute` call rescans the attribute string. A caller
-that reads every attribute should use the eager functions. The scripts behind
-these figures are not in the repo.
+that reads every attribute should use the eager functions. The lead is smaller
+than 5.6.4's (1.9x and 3.2x parse only) because 5.6.5 sped up the eager side,
+not because the lazy side slowed. The scripts behind these figures are not in
+the repo.
 
 For a caller that holds a whole file resident, the lazy side retains less heap,
 and that difference lasts longer than the parse speedup. On an earlier generated
