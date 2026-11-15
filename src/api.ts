@@ -334,8 +334,10 @@ export function parseStringSync(str: string): GffFeature[] {
 
   // filters and parses in one pass rather than collecting the kept lines and
   // handing them to parseLines, which would hold a second array the size of the
-  // file alongside the split
-  for (const line of str.split(/\r?\n/)) {
+  // file alongside the split. A string separator rather than /\r?\n/, because
+  // V8 caches a regex split's input, keeping the whole file alive after return.
+  for (const rawLine of str.split('\n')) {
+    const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine
     if (line.startsWith('##FASTA') || line.startsWith('>')) {
       break
     }

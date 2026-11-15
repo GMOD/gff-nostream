@@ -545,6 +545,15 @@ ctgA\t.\texon\t1\t50\t.\t+\t.\tID=e1;Parent=g1,missing_gene`,
     expect(parseLines(lines)[0]!.id).toBe('g1')
   })
 
+  it('parses a CRLF string as it does an LF one', () => {
+    const str = fs.readFileSync('test/data/spec_eden.gff3', 'utf8')
+    const crlf = str.replaceAll('\n', '\r\n')
+    expect(parseStringSync(crlf)).toEqual(parseStringSync(str))
+    expect(parseStringSync('\r\nchr1\t.\tgene\t1\t9\r\n#c\r\n')).toEqual(
+      parseStringSync('\nchr1\t.\tgene\t1\t9\n#c\n'),
+    )
+  })
+
   it('parseRecords keeps orphans paired with their record', () => {
     const records = [
       { line: 'ctgA\t.\texon\t1\t50\t.\t+\t.\tParent=missing', offset: 7 },
