@@ -129,30 +129,6 @@ function withoutPrototype<T extends object>(table: T): T {
   return Object.setPrototypeOf(table, null) as T
 }
 
-// Pre-computed lowercase for common GFF3 spec attribute names to avoid
-// toLowerCase() calls in the hot path
-const COMMON_ATTRS: Record<string, string | undefined> = withoutPrototype({
-  ID: 'id',
-  Name: 'name',
-  Parent: 'parent',
-  Note: 'note',
-  Dbxref: 'dbxref',
-  Ontology_term: 'ontology_term',
-  Is_circular: 'is_circular',
-  Alias: 'alias',
-  Target: 'target',
-  Gap: 'gap',
-  Derives_from: 'derives_from',
-  id: 'id',
-  name: 'name',
-  parent: 'parent',
-  note: 'note',
-  dbxref: 'dbxref',
-  alias: 'alias',
-  target: 'target',
-  gap: 'gap',
-})
-
 const STRAND_MAP: Record<string, number | undefined> = withoutPrototype({
   '+': 1,
   '-': -1,
@@ -229,35 +205,54 @@ function trimSpaces(s: string, from: number, to: number) {
   return i
 }
 
+// Feature key for each tag seen so far, capped because tags come from the
+// file. An object rather than a Map: a property key is interned, so the cache
+// holds a copy of each tag where a Map would hold the slice of the input it
+// was cut from, keeping the whole input alive.
+const ATTRIBUTE_KEYS: Record<string, string | undefined> = withoutPrototype({})
+const MAX_ATTRIBUTE_KEYS = 1024
+let attributeKeyCount = 0
+
 /** Feature key an attribute tag is stored under: lowercased, and suffixed if reserved. */
 function attributeKey(tag: string) {
-  const common = COMMON_ATTRS[tag]
-  if (common === undefined) {
-    const key = tag.toLowerCase()
-    return JBROWSE_DEFAULT_FIELDS.has(key) ? `${key}2` : key
+  const cached = ATTRIBUTE_KEYS[tag]
+  if (cached === undefined) {
+    const lower = tag.toLowerCase()
+    const key = JBROWSE_DEFAULT_FIELDS.has(lower) ? `${lower}2` : lower
+    if (attributeKeyCount < MAX_ATTRIBUTE_KEYS) {
+      ATTRIBUTE_KEYS[tag] = key
+      attributeKeyCount++
+    }
+    return key
   } else {
-    return common
+    return cached
   }
 }
 
-/** Comma-separated attribute values between `from` and `end`. */
+/**
+ * Comma-separated attribute values in the non-empty `[from,end)`, collapsed to
+ * a scalar when there is one, or undefined when there are only commas. The
+ * comma test runs on the slice so it stops at `end`, where an `indexOf` on the
+ * whole string would run on to the next comma of any later attribute.
+ */
 function parseValues(
   s: string,
   from: number,
   end: number,
   shouldUnescape: boolean,
 ) {
-  const values: string[] = []
-  let valStart = from
-  while (valStart < end) {
-    const commaIdx = indexOrEnd(s, ',', valStart, end)
-    if (commaIdx > valStart) {
-      const val = s.slice(valStart, commaIdx)
-      values.push(shouldUnescape ? unescape(val) : val)
+  const raw = s.slice(from, end)
+  if (raw.includes(',')) {
+    const values: string[] = []
+    for (const val of raw.split(',')) {
+      if (val.length !== 0) {
+        values.push(shouldUnescape ? unescape(val) : val)
+      }
     }
-    valStart = commaIdx + 1
+    return values.length > 1 ? values : values[0]
+  } else {
+    return shouldUnescape ? unescape(raw) : raw
   }
-  return values
 }
 
 /**
@@ -285,15 +280,15 @@ export function parseAttributes(
     // Nothing to store for a tag whose '=' belongs to a later attribute, or
     // that has no value before the next ';' — including `Foo=` and `Foo=,,`
     if (eqIdx !== -1 && eqIdx + 1 < semiIdx) {
-      const values = parseValues(attrs, eqIdx + 1, semiIdx, shouldUnescape)
-      if (values.length !== 0) {
+      const value = parseValues(attrs, eqIdx + 1, semiIdx, shouldUnescape)
+      if (value !== undefined) {
         const key = attributeKey(
           attrs.slice(
             skipSpaces(attrs, start, eqIdx),
             trimSpaces(attrs, start, eqIdx),
           ),
         )
-        result[key] = values.length === 1 ? values[0] : values
+        result[key] = value
       }
     }
     start = semiIdx + 1
@@ -329,12 +324,11 @@ export interface LazyGffFeature extends GffColumns {
  * than an array, because this is resolved on every lookup and an array here
  * costs more than the scan it feeds.
  *
- * Every COMMON_ATTRS entry equals its tag's `toLowerCase()`, so that table is
- * purely a fast path and the mapping is exactly "lowercase, then suffix '2' if
- * the result is reserved". Inverting it: a reserved key is unreachable (any tag
- * lowercasing to it is suffixed away), and a key ending in '2' whose stem is
- * reserved is reachable two ways — from the stem (`Start` -> `start2`) and from
- * a tag literally named `start2`. Which of those wins is decided by position,
+ * The mapping is "lowercase, then suffix '2' if the result is reserved".
+ * Inverting it: a reserved key is unreachable (any tag lowercasing to it is
+ * suffixed away), and a key ending in '2' whose stem is reserved is reachable
+ * two ways — from the stem (`Start` -> `start2`) and from a tag literally named
+ * `start2`. Which of those wins is decided by position,
  * not by preference: the scan keeps the last match either way, as the eager
  * parser's last-wins assignment does. A key with an uppercase letter is
  * unreachable too, so a caller asking for `itemRgb` gets no scan at all.
@@ -447,9 +441,8 @@ function scanAttributes(
       const tagEnd = trimSpaces(attrs, tagStart, eqIdx)
       const slot0 = tagIs(attrs, tagStart, tagEnd, tag0, alt0)
       if (slot0 || tagIs(attrs, tagStart, tagEnd, tag1, alt1)) {
-        const values = parseValues(attrs, eqIdx + 1, semiIdx, true)
-        if (values.length !== 0) {
-          const value = values.length === 1 ? values[0] : values
+        const value = parseValues(attrs, eqIdx + 1, semiIdx, true)
+        if (value !== undefined) {
           if (slot0) {
             value0 = value
           } else {
