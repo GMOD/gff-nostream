@@ -19,8 +19,8 @@ workflow.
 ## Publishing
 
 Releases publish automatically via GitHub Actions using npm trusted publishing
-(OIDC, no stored token). The workflow requires `--provenance` and
-`id-token: write` permissions.
+(OIDC, no stored token). The publish job needs `id-token: write`; trusted
+publishing attaches provenance without a `--provenance` flag.
 
 gff-nostream already has trusted publishing set up. To set up a new package:
 `npm trust github <pkg> --file publish.yml --repo GMOD/<repo>` (requires
