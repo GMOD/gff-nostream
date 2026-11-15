@@ -105,9 +105,10 @@ function strField<E extends null | ''>(
 
 // Attribute names that collide with a field of the parsed feature are suffixed
 // with '2'. 'subfeatures' is essential: an attribute of that name would replace
-// the subfeature array with a string and break tree building. 'refname' does
-// not collide with the camelCase 'refName' field, but is reserved so the two
-// don't sit side by side.
+// the subfeature array with a string and break tree building. '__proto__' is
+// too: assigning it sets the feature's prototype rather than storing a value.
+// 'refname' does not collide with the camelCase 'refName' field, but is
+// reserved so the two don't sit side by side.
 const JBROWSE_DEFAULT_FIELDS = new Set([
   'start',
   'end',
@@ -119,6 +120,7 @@ const JBROWSE_DEFAULT_FIELDS = new Set([
   'phase',
   'strand',
   'subfeatures',
+  '__proto__',
 ])
 
 // Lookup tables keyed by file content: without a prototype, a tag or strand

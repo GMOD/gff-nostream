@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import {
   extractType,
   getAttribute,
+  getAttributes,
   getLinkAttributes,
   hasIdAttribute,
   parseLines,
@@ -589,6 +590,19 @@ chr1\t.\texon\t1\t50\t.\t+\t.\tParent=g1`,
     expect(eager!.constructor).toBe('a')
     expect(eager!.tostring).toBe('b')
     expect(getAttribute(lazy!, 'constructor')).toBe('a')
+  })
+
+  it('stores a __proto__ tag as __proto__2 instead of setting the prototype', () => {
+    const line = 'chr1\t.\tgene\t1\t100\t.\t+\t.\tID=g1;__proto__=a,b'
+    const [eager] = parseStringSync(line)
+    const [lazy] = parseLinesLazy([line])
+    expect(Object.getPrototypeOf(eager)).toBe(Object.prototype)
+    expect(eager!.__proto__2).toEqual(['a', 'b'])
+    expect(getAttribute(lazy!, '__proto__')).toBeUndefined()
+    expect(getAttribute(lazy!, '__proto__2')).toEqual(['a', 'b'])
+    const attrs = getAttributes(lazy!)
+    expect(Object.getPrototypeOf(attrs)).toBe(Object.prototype)
+    expect(attrs.__proto__2).toEqual(['a', 'b'])
   })
 })
 
